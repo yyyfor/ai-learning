@@ -1,0 +1,19 @@
+# Local environments, caches, and build metadata
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Credentials and machine-local settings
+.env
+.env.*
+!.env.example
+.vscode/
+.DS_Store
+
+# Generated browser captures and local outputs
+.playwright-cli/
+output/

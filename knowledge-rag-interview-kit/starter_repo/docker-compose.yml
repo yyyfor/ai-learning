@@ -1,0 +1,59 @@
+services:
+  # Optional Week 3 vector store. Use host Ollama on macOS for GPU acceleration.
+  qdrant:
+    image: ${QDRANT_IMAGE:-docker.m.daocloud.io/qdrant/qdrant:v1.17.0}
+    profiles: [rag]
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  postgres:
+    image: docker.m.daocloud.io/library/postgres:18
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: rag
+      POSTGRES_DB: knowledge
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:8
+    ports:
+      - "6379:6379"
+
+  # Postgres 和 Redis 使用 DaoCloud 镜像地址。
+  # Elasticsearch 使用 Elastic 官方 registry，不经过 Docker Hub mirror。
+  # 镜像大版本需与 pyproject.toml 中 elasticsearch 客户端的大版本保持一致：
+  # elasticsearch-py 9.x 无法连接 8.x server（会直接报错），反之亦然。
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.5.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+
+  # Optional Elasticsearch UI; start with: docker compose --profile tools up -d kibana
+  kibana:
+    image: ${KIBANA_IMAGE:-m.daocloud.io/docker.elastic.co/kibana/kibana:9.5.2}
+    profiles: [tools]
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      TELEMETRY_ENABLED: "false"
+    ports:
+      - "127.0.0.1:5601:5601"
+    depends_on:
+      - elasticsearch
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/password123
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+
+volumes:
+  qdrant_data:

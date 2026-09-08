@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knowledge Studio</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to workspace</a>
+  <aside class="sidebar">
+    <a class="brand" href="#documents"><span class="brand-mark">k.</span><span>Knowledge<span class="brand-sub">STUDIO</span></span></a>
+    <div class="workspace-label"><span class="dot"></span> Local workspace</div>
+    <p class="nav-label">WORKSPACE</p>
+    <nav aria-label="Main navigation">
+      <a href="#documents" data-view="documents"><span aria-hidden="true">▤</span> Documents</a>
+      <a href="#search" data-view="search"><span aria-hidden="true">⌕</span> Search & query</a>
+      <a href="#rag" data-view="rag"><span aria-hidden="true">✧</span> RAG answers</a>
+      <p class="nav-label">DATA EXPLORER</p>
+      <a href="#redis" data-view="redis"><span aria-hidden="true">◷</span> Redis cache</a>
+      <a href="#elastic" data-view="elastic"><span aria-hidden="true">⌘</span> Elasticsearch <span class="nav-note">Kibana</span></a>
+    </nav>
+    <div class="sidebar-bottom"><span class="small-label">CONNECTIONS</span><div id="connections">Checking services…</div><a href="/docs" target="_blank" rel="noopener">Backend API docs ↗</a></div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar"><span>Workspace <span class="slash">/</span> <span id="breadcrumb">Documents</span></span><span class="mode" id="mode">Checking search mode…</span></header>
+    <main id="main" tabindex="-1">
+      <div id="notice" role="status" aria-live="polite" hidden></div>
+      <section id="view-documents" class="view" aria-labelledby="documents-title">
+        <div class="page-heading"><div><p class="eyebrow">YOUR KNOWLEDGE BASE</p><h1 id="documents-title">Documents</h1><p>Create a source of truth. Make it searchable.</p></div><button class="primary" id="create-open">+ New document</button></div>
+        <div class="section-bar"><div><strong>Document library</strong><span class="tag">PostgreSQL</span></div><button id="documents-refresh" class="quiet">↻ Refresh</button></div>
+        <p class="helper">Records from the PostgreSQL documents table. Select a title to see the full record.</p>
+        <div id="documents-state" class="state" role="status">Loading documents…</div>
+        <div class="table-wrap"><table id="documents-table" hidden><thead><tr><th>Document</th><th>Source</th><th>Tags</th><th>Created</th></tr></thead><tbody id="documents-body"></tbody></table></div>
+        <div class="pagination"><span id="documents-page">Page 1</span><div><button id="documents-prev" disabled>← Previous</button><button id="documents-next" disabled>Next →</button></div></div>
+        <div class="footnote"><span class="dot"></span> Create once. Stored in PostgreSQL and indexed in Elasticsearch.</div>
+      </section>
+
+      <section id="view-search" class="view" aria-labelledby="search-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">FIND WHAT YOU NEED</p><h1 id="search-title">Search & query</h1><p>Explore matching documents and the context behind them.</p></div></div>
+        <form id="search-form">
+          <label class="small-label" for="query">SEARCH YOUR DOCUMENTS</label>
+          <div class="search-box"><span aria-hidden="true">⌕</span><input id="query" name="query" required placeholder="Search a policy, topic, or phrase…" autocomplete="off"><button class="primary" type="submit">Search →</button></div>
+          <details class="filters"><summary>Filter by source, tags & metadata</summary><div class="form-grid"><label>Source<input id="filter-source" placeholder="Any source"></label><label>Tags<input id="filter-tags" placeholder="finance, policy"></label><label class="full">Metadata (JSON)<textarea id="filter-metadata" rows="2" placeholder='{"team": "finance"}'></textarea></label></div></details>
+          <p class="helper">Returns ranked documents, citations, and context. This query does not generate an AI answer.</p>
+        </form>
+        <div class="section-bar"><strong id="search-summary">Results</strong><span class="tag">Elasticsearch → Redis</span></div>
+        <div id="search-results" class="results"><div class="state">Your next answer starts with a search.<span>Enter a phrase above to find matching documents.</span></div></div>
+        <div class="pagination" id="search-pagination" hidden><span id="search-page"></span><div><button id="search-prev">← Previous</button><button id="search-next">Next →</button></div></div>
+        <details id="context-panel" class="context" hidden><summary>View assembled context & citations</summary><h3>Context</h3><pre id="query-context"></pre><h3>Citations</h3><pre id="query-citations"></pre></details>
+      </section>
+
+      <section id="view-rag" class="view" aria-labelledby="rag-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">ASK YOUR KNOWLEDGE BASE</p><h1 id="rag-title">RAG answers</h1><p>Ask a question. Read the answer alongside its source evidence.</p></div><button id="rag-refresh">↻ Check setup</button></div>
+        <p id="rag-status" class="info-line" role="status">Checking RAG setup…</p>
+        <details class="context" id="rag-setup"><summary>Local setup · no API key required</summary><p class="helper">In starter_repo, start the services and download the models. Stop your existing API process, then restart it with RAG enabled.</p><pre>docker compose --profile rag up -d qdrant
+ollama pull embeddinggemma
+ollama pull llama3:latest
+RAG_ENABLED=true .venv/bin/uvicorn app.main:app --reload</pre><p class="helper">Ollama must be running locally. Model names can be changed with OLLAMA_EMBEDDING_MODEL and OLLAMA_CHAT_MODEL.</p></details>
+        <details class="context"><summary>1. Prepare documents · upload a PDF or index a library document</summary>
+          <div class="rag-ingestion">
+            <form id="rag-upload-form"><h3>Upload a PDF</h3><label>Document title<input name="title" required maxlength="200" placeholder="e.g. Annual leave policy"></label><label>PDF file<input name="file" type="file" accept=".pdf,application/pdf" required></label><p class="helper">Text-based PDFs only, up to 10 MiB. Upload stores the document; indexing is the next step.</p><button type="submit">Upload PDF</button><p id="rag-upload-status" class="helper" role="status"></p></form>
+            <form id="rag-index-form"><h3>Index for RAG</h3><label>Document ID<input id="rag-document-id" required placeholder="Paste an ID, or upload a PDF first"></label><label>Chunking strategy<select id="rag-strategy"><option value="recursive">Recursive · text boundaries</option><option value="semantic">Semantic · topic changes</option></select></label><p class="helper">Uses 800-character chunks with 80-character overlap. Existing documents are not indexed automatically. Reindexing replaces their chunks.</p><button id="rag-index-button" type="submit" disabled>Index document</button><p id="rag-index-status" class="helper" role="status"></p></form>
+          </div>
+        </details>
+        <form id="rag-form" class="rag-question">
+          <label class="small-label" for="rag-question">2. ASK ABOUT YOUR INDEXED DOCUMENTS</label>
+          <div class="search-box"><input id="rag-question" required maxlength="2000" placeholder="How do I request annual leave?" autocomplete="off"><button id="rag-ask-button" class="primary" type="submit" disabled>Ask →</button></div>
+          <details class="filters"><summary>Retrieval options</summary><div class="form-grid"><label>Source<input id="rag-source" placeholder="Any source (PDF uploads use pdf)"></label><label>Tags<input id="rag-tags" placeholder="finance, policy"></label><label>Top-k chunks<input id="rag-top-k" type="number" min="1" max="20" value="5" required></label><label>Minimum cosine similarity<input id="rag-threshold" type="number" min="-1" max="1" step="0.05" value="0.3" required></label></div></details>
+          <p class="helper">Local models may take a few minutes. Answers can be wrong—check the citations.</p>
+        </form>
+        <div id="rag-result" aria-live="polite"><div class="state">Ready when your documents are.<span>Index a document, then ask a question above.</span></div></div>
+      </section>
+
+      <section id="view-redis" class="view" aria-labelledby="redis-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LOOK UNDER THE HOOD</p><h1 id="redis-title">Redis cache</h1><p>See the search results temporarily stored in your cache.</p></div><button class="primary" id="redis-refresh">↻ Refresh cache</button></div>
+        <div class="info-line"><strong>30-second cache</strong><span>Run a search, then refresh here before it expires. Reading entries does not extend their lifetime.</span></div>
+        <div class="section-bar"><strong>Cached search responses</strong><code>knowledge:search:*</code></div>
+        <div id="redis-state" class="state" role="status">Loading cache…</div>
+        <div id="redis-entries"></div>
+        <div class="pagination"><span>Read-only · app cache keys only</span><button id="redis-more" hidden>Next scan batch →</button></div>
+      </section>
+
+      <section id="view-elastic" class="view" aria-labelledby="elastic-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">EXPLORE YOUR SEARCH INDEX</p><h1 id="elastic-title">Elasticsearch</h1><p>Inspect indexed documents and mappings, or explore further in Kibana.</p></div><a class="button primary" id="kibana-link" target="_blank" rel="noopener">Open Kibana ↗</a></div>
+        <div class="section-bar"><strong id="elastic-summary">Indexed documents</strong><button class="quiet" id="elastic-refresh">↻ Refresh index</button></div>
+        <p class="helper">Live index records via the backend API. Expand a document to see its Elasticsearch _source.</p>
+        <div id="elastic-records"></div>
+        <div class="pagination"><span id="elastic-page">Page 1</span><div><button id="elastic-prev" disabled>← Previous</button><button id="elastic-next" disabled>Next →</button></div></div>
+        <details class="context"><summary>View index mapping</summary><pre id="elastic-mapping"></pre></details>
+        <details class="context"><summary>Set up Kibana (optional)</summary>
+        <div class="elastic-intro"><span class="elastic-symbol" aria-hidden="true">⌘</span><div><h2>A dedicated view of your data.</h2><p>Kibana connects to the same Elasticsearch service. Browse your documents in Discover, or inspect the index in Dev Tools.</p></div></div>
+        <ol class="steps"><li><h3>Start Kibana</h3><p>In the starter_repo directory, run:</p><pre>docker compose --profile tools up -d kibana</pre><p class="helper">First startup can take a few minutes. Open Kibana once it is ready.</p></li><li><h3>Create a data view</h3><p>Open <strong>Stack Management → Data Views → Create data view</strong>. Use the index below and choose “I don't want to use the time filter”.</p><pre id="index-name">Loading index name…</pre></li><li><h3>Explore in Discover</h3><p>Open <strong>Discover</strong> and select your data view. Add title, content, source, tags, and metadata columns.</p><details><summary>Or use Dev Tools</summary><pre id="elastic-query"></pre></details></li></ol>
+        </details>
+      </section>
+    </main>
+    <footer>Knowledge Studio <span>Local development workspace</span></footer>
+  </div>
+
+  <dialog id="create-dialog" aria-labelledby="create-title">
+    <div class="dialog-heading"><div><p class="eyebrow">GROW YOUR KNOWLEDGE BASE</p><h2 id="create-title">New document</h2></div><button type="button" class="icon-button" id="create-close" aria-label="Close new document">×</button></div>
+    <form id="create-form"><div class="form-grid">
+      <label class="full">Title<input name="title" required maxlength="200" placeholder="e.g. Travel reimbursement policy"></label>
+      <label class="full">Content<textarea name="content" rows="7" required placeholder="Write or paste the document content…"></textarea></label>
+      <label>Source<input name="source" required maxlength="200" value="manual"></label>
+      <label>Tags <span class="optional">optional</span><input name="tags" placeholder="finance, policy"></label>
+      <label class="full">Metadata (JSON) <span class="optional">optional</span><textarea name="metadata" rows="3" placeholder='{"team": "finance"}'></textarea></label>
+    </div><p id="create-error" class="error" role="alert" hidden></p><div class="dialog-actions"><span>Saved to PostgreSQL + Elasticsearch</span><button class="primary" type="submit">Create document</button></div></form>
+  </dialog>
+  <dialog id="document-dialog" aria-labelledby="detail-title"><div class="dialog-heading"><div><p class="eyebrow">DOCUMENT RECORD</p><h2 id="detail-title"></h2></div><button type="button" class="icon-button" id="detail-close" aria-label="Close document">×</button></div><p id="detail-source" class="helper"></p><button id="detail-rag" type="button">Use in RAG →</button><div id="detail-content" class="document-content"></div><details class="context"><summary>Full PostgreSQL record (JSON)</summary><pre id="detail-json"></pre></details></dialog>
+</body>
+</html>
