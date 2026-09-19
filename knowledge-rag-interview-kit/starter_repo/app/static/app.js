@@ -268,6 +268,32 @@ async function loadRagStatus() {
 }
 
 $('rag-refresh').addEventListener('click', loadRagStatus);
+$('rag-pdf-file').addEventListener('change', (event) => {
+  const file = event.currentTarget.files?.[0];
+  if (!file) {
+    $('rag-upload-status').textContent = 'No PDF selected.';
+    return;
+  }
+
+  const isPdf = file.type === 'application/pdf'
+    || file.name.toLowerCase().endsWith('.pdf');
+  if (!isPdf) {
+    event.currentTarget.value = '';
+    $('rag-upload-status').textContent = 'Please choose a PDF file.';
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    event.currentTarget.value = '';
+    $('rag-upload-status').textContent = 'This PDF is larger than 10 MiB.';
+    return;
+  }
+
+  const size = file.size < 1024 * 1024
+    ? Math.max(1, Math.round(file.size / 1024)) + ' KiB'
+    : (file.size / 1024 / 1024).toFixed(1) + ' MiB';
+  $('rag-upload-status').textContent = file.name
+    + ' selected (' + size + '). Click Upload PDF to continue.';
+});
 $('rag-upload-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
