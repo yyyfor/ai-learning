@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Knowledge Studio</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/app.js" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=20260919-3">
+  <script src="/static/app.js?v=20260919-3" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to workspace</a>
@@ -62,7 +62,7 @@ ollama pull llama3:latest
 RAG_ENABLED=true .venv/bin/uvicorn app.main:app --reload</pre><p class="helper">Ollama must be running locally. Model names can be changed with OLLAMA_EMBEDDING_MODEL and OLLAMA_CHAT_MODEL.</p></details>
         <details class="context"><summary>1. Prepare documents · upload a PDF or index a library document</summary>
           <div class="rag-ingestion">
-            <form id="rag-upload-form"><h3>Upload a PDF</h3><label>Document title<input name="title" required maxlength="200" placeholder="e.g. Annual leave policy"></label><label>PDF file<input id="rag-pdf-file" name="file" type="file" accept=".pdf,application/pdf" required></label><p class="helper">Text-based PDFs only, up to 10 MiB. Upload stores the document; indexing is the next step.</p><button type="submit">Upload PDF</button><p id="rag-upload-status" class="helper" role="status" aria-live="polite"></p></form>
+            <form id="rag-upload-form" novalidate><h3>Upload a PDF</h3><label>Document title<input name="title" required maxlength="200" placeholder="e.g. Annual leave policy"></label><label for="rag-pdf-file">PDF file</label><div id="rag-file-dropzone" class="file-picker" role="group" aria-describedby="rag-file-help"><input id="rag-pdf-file" class="file-input" name="file" type="file" accept=".pdf,application/pdf" aria-required="true"><span class="file-drop-hint">or drag a PDF here</span></div><p id="rag-file-help" class="helper">Text-based PDFs only, up to 10 MiB. Upload stores the document; indexing is the next step.</p><button type="submit">Upload PDF</button><p id="rag-upload-status" class="helper" role="status" aria-live="polite"></p></form>
             <form id="rag-index-form"><h3>Index for RAG</h3><label>Document ID<input id="rag-document-id" required placeholder="Paste an ID, or upload a PDF first"></label><label>Chunking strategy<select id="rag-strategy"><option value="recursive">Recursive · text boundaries</option><option value="semantic">Semantic · topic changes</option></select></label><p class="helper">Uses 800-character chunks with 80-character overlap. Existing documents are not indexed automatically. Reindexing replaces their chunks.</p><button id="rag-index-button" type="submit" disabled>Index document</button><p id="rag-index-status" class="helper" role="status"></p></form>
           </div>
         </details>

@@ -240,6 +240,7 @@ async function loadElastic() {
 let ragEnabled = false;
 let ragAsking = false;
 let ragIndexing = false;
+let selectedPdfFile = null;
 
 function updateRagButtons() {
   $('rag-ask-button').disabled = !ragEnabled || ragAsking;
@@ -268,39 +269,79 @@ async function loadRagStatus() {
 }
 
 $('rag-refresh').addEventListener('click', loadRagStatus);
-$('rag-pdf-file').addEventListener('change', (event) => {
-  const file = event.currentTarget.files?.[0];
+function selectPdfFile(file) {
   if (!file) {
+    selectedPdfFile = null;
     $('rag-upload-status').textContent = 'No PDF selected.';
-    return;
+    return false;
   }
 
   const isPdf = file.type === 'application/pdf'
     || file.name.toLowerCase().endsWith('.pdf');
   if (!isPdf) {
-    event.currentTarget.value = '';
+    selectedPdfFile = null;
+    $('rag-pdf-file').value = '';
     $('rag-upload-status').textContent = 'Please choose a PDF file.';
-    return;
+    return false;
   }
   if (file.size > 10 * 1024 * 1024) {
-    event.currentTarget.value = '';
+    selectedPdfFile = null;
+    $('rag-pdf-file').value = '';
     $('rag-upload-status').textContent = 'This PDF is larger than 10 MiB.';
-    return;
+    return false;
   }
 
+  selectedPdfFile = file;
   const size = file.size < 1024 * 1024
     ? Math.max(1, Math.round(file.size / 1024)) + ' KiB'
     : (file.size / 1024 / 1024).toFixed(1) + ' MiB';
   $('rag-upload-status').textContent = file.name
     + ' selected (' + size + '). Click Upload PDF to continue.';
+  return true;
+}
+$('rag-pdf-file').addEventListener('change', (event) => {
+  selectPdfFile(event.currentTarget.files?.[0]);
+});
+const pdfDropzone = $('rag-file-dropzone');
+pdfDropzone.addEventListener('dragenter', (event) => {
+  event.preventDefault();
+  pdfDropzone.classList.add('dragover');
+});
+pdfDropzone.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  pdfDropzone.classList.add('dragover');
+});
+pdfDropzone.addEventListener('dragleave', () => pdfDropzone.classList.remove('dragover'));
+pdfDropzone.addEventListener('drop', (event) => {
+  event.preventDefault();
+  pdfDropzone.classList.remove('dragover');
+  const file = event.dataTransfer.files?.[0];
+  if (!selectPdfFile(file)) return;
+  try {
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    $('rag-pdf-file').files = transfer.files;
+  } catch {
+    // selectedPdfFile still keeps drag-and-drop working in older browsers.
+  }
 });
 $('rag-upload-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const data = new FormData(form);
-  const button = form.querySelector('button');
-  const file = data.get('file');
-  if (!file.size || file.size > 10 * 1024 * 1024) {
+  const button = form.querySelector('button[type="submit"]');
+  const titleInput = form.elements.namedItem('title');
+  const title = titleInput.value.trim();
+  if (!title) {
+    $('rag-upload-status').textContent = 'Enter a document title before uploading.';
+    titleInput.focus();
+    return;
+  }
+  data.set('title', title);
+  const formFile = data.get('file');
+  const file = selectedPdfFile || (formFile instanceof File ? formFile : null);
+  if (selectedPdfFile) data.set('file', selectedPdfFile);
+  if (!file || !file.size || file.size > 10 * 1024 * 1024) {
     $('rag-upload-status').textContent = 'Choose a non-empty PDF of at most 10 MiB.';
     return;
   }
@@ -312,6 +353,7 @@ $('rag-upload-form').addEventListener('submit', async (event) => {
     $('rag-upload-status').textContent = `Saved “${document.title}”. Next: click Index document. ID: ${document.id}`;
     $('rag-index-status').textContent = 'PDF saved. Indexing has not started yet.';
     form.reset();
+    selectedPdfFile = null;
   } catch (error) {
     $('rag-upload-status').textContent = errorMessage(error) + ' If the request timed out, check the document library before uploading again.';
   } finally { button.disabled = false; }
