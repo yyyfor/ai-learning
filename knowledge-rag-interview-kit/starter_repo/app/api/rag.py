@@ -7,8 +7,10 @@ from starlette.concurrency import run_in_threadpool
 from app.api.dependencies import get_knowledge_service
 from app.dto.documents import DocumentCreate, DocumentResponse
 from app.dto.rag import (ChunkOptions, ChunkPreviewRequest, ChunkResponse,
-                         IndexResponse, RagQueryRequest, RagQueryResponse)
+                         HybridQueryRequest, HybridQueryResponse, IndexResponse,
+                         RagQueryRequest, RagQueryResponse)
 from app.ingestion.parsing import parse_pdf
+from app.services.hybrid import RetrievalUnavailableError
 from app.services.knowledge import KnowledgeService
 from app.services.rag import RagService
 
@@ -26,6 +28,11 @@ def get_rag_service(request: Request) -> RagService:
 async def run_rag(operation):
     try:
         return await operation
+    except RetrievalUnavailableError as exc:
+        # Every retriever the mode asked for is down. Partial failures never
+        # reach here: they degrade the ranking and return a warning instead.
+        logger.warning("retrieval_unavailable detail=%s", exc)
+        raise HTTPException(503, f"Retrieval unavailable: {exc}") from exc
     except (httpx.HTTPError, KeyError) as exc:
         logger.warning("rag_dependency_failed type=%s", type(exc).__name__)
         raise HTTPException(503, "RAG dependency unavailable. Check Ollama models and Qdrant.") from exc
@@ -36,9 +43,14 @@ async def run_rag(operation):
 @router.get("/status")
 async def status(request: Request):
     service = getattr(request.app.state, "rag_service", None)
+    hybrid = getattr(service, "hybrid", None) if service else None
     return {"enabled": service is not None,
             "embedding_model": service.models.embedding_model if service else None,
-            "chat_model": service.models.chat_model if service else None}
+            "chat_model": service.models.chat_model if service else None,
+            "lexical_chunk_index": getattr(service.chunk_index, "index_name", None) if service else None,
+            "reranker": hybrid.reranker.name if hybrid else None,
+            "query_rewriter": hybrid.rewriter.name if hybrid else None,
+            "rrf_k": hybrid.rrf_k if hybrid else None}
 
 
 @router.post("/pdf", response_model=DocumentResponse, status_code=201)
@@ -85,3 +97,16 @@ async def index_document(document_id: str, payload: ChunkOptions,
 async def query(payload: RagQueryRequest,
                 service: RagService = Depends(get_rag_service)):
     return await run_rag(service.query(payload))
+
+
+@router.post("/hybrid", response_model=HybridQueryResponse)
+async def hybrid(payload: HybridQueryRequest,
+                 service: RagService = Depends(get_rag_service)):
+    """Retrieval only, no answer generation.
+
+    Same pipeline /rag/query ranks with, so switching `mode` between bm25,
+    vector and hybrid compares the retrievers on equal terms, and the
+    evaluation harness can measure retrieval without paying for generation.
+    """
+    result = await run_rag(service.retrieve(payload))
+    return result.as_dict()

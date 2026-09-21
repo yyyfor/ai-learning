@@ -1,6 +1,9 @@
 import hashlib
+from typing import Any
 
 import httpx
+
+from app.domain.retrieval import RetrievalFilters
 
 
 class QdrantIndex:
@@ -38,14 +41,17 @@ class QdrantIndex:
         if response.status_code != 404:
             response.raise_for_status()
 
-    async def query(self, vector, top_k, source, tags, score_threshold):
-        conditions = [{"key": "tags", "match": {"value": tag}} for tag in tags]
-        if source is not None:
-            conditions.append({"key": "source", "match": {"value": source}})
-        response = await self.client.post(self.path + "/points/query", json={
+    async def query(self, vector, top_k, filters=None, score_threshold=None):
+        """Dense candidates. Filters are applied by Qdrant, before top-k is cut."""
+        body: dict[str, Any] = {
             "query": vector, "limit": top_k, "with_payload": True,
-            "filter": {"must": conditions}, "score_threshold": score_threshold,
-        })
+        }
+        conditions = build_filters(filters or RetrievalFilters())
+        if conditions:
+            body["filter"] = {"must": conditions}
+        if score_threshold is not None:
+            body["score_threshold"] = score_threshold
+        response = await self.client.post(self.path + "/points/query", json=body)
         if response.status_code == 404:
             return []
         response.raise_for_status()
@@ -53,3 +59,20 @@ class QdrantIndex:
 
     async def close(self):
         await self.client.aclose()
+
+
+def build_filters(filters: RetrievalFilters) -> list[dict[str, Any]]:
+    """Translate shared filters into Qdrant payload conditions.
+
+    Qdrant keeps payload values in their original JSON type, while the
+    Elasticsearch `flattened` field stores them as strings; each store is
+    matched in its own terms so the same RetrievalFilters means the same set.
+    """
+    conditions: list[dict[str, Any]] = [
+        {"key": "tags", "match": {"value": tag}} for tag in filters.tags
+    ]
+    if filters.source is not None:
+        conditions.append({"key": "source", "match": {"value": filters.source}})
+    for key, value in filters.metadata.items():
+        conditions.append({"key": f"metadata.{key}", "match": {"value": value}})
+    return conditions

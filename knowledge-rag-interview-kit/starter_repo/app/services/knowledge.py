@@ -51,6 +51,7 @@ class KnowledgeService:
         self.search_index = search_index
         self.cache = cache
         self.vector_index = None
+        self.chunk_index = None
 
     async def initialize(self) -> None:
         # This makes an existing PostgreSQL dataset searchable after a fresh
@@ -93,6 +94,8 @@ class KnowledgeService:
         await self.get_document(document_id)
         if self.vector_index is not None:
             await self.vector_index.remove(document_id)
+        if self.chunk_index is not None:
+            await self.chunk_index.remove(document_id)
         if not await self.repository.delete(document_id):
             raise DocumentNotFoundError(document_id)
         await self.search_index.remove(document_id)

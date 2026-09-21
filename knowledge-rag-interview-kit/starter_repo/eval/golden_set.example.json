@@ -1,0 +1,78 @@
+{
+  "notes": [
+    "Copy to eval/golden_set.json and replace every REPLACE_WITH_DOCUMENT_ID.",
+    "GET /documents lists indexed documents with their ids.",
+    "Lab 4 asks for ~50 queries. Keep all five categories represented:",
+    "  exact_id     - identifiers, codes, clause numbers. BM25 should win.",
+    "  terminology  - domain jargon used verbatim. BM25 usually wins.",
+    "  paraphrase   - user words differ from the document's. Dense/rewrite win.",
+    "  temporal     - time-conditioned questions (effective dates, versions).",
+    "  permission   - the same question under a metadata filter.",
+    "expected_document_ids: every document that would satisfy the question.",
+    "filters: optional, passed straight to the retriever (source, tags, metadata)."
+  ],
+  "queries": [
+    {
+      "id": "q-001",
+      "category": "exact_id",
+      "query": "POL-2024-017",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"]
+    },
+    {
+      "id": "q-002",
+      "category": "exact_id",
+      "query": "What does clause 7.3 of the data retention policy require?",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"]
+    },
+    {
+      "id": "q-003",
+      "category": "terminology",
+      "query": "segregation of duties control owner",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"]
+    },
+    {
+      "id": "q-004",
+      "category": "terminology",
+      "query": "materiality threshold for audit findings",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"]
+    },
+    {
+      "id": "q-005",
+      "category": "paraphrase",
+      "query": "how many days off do I get each year?",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"]
+    },
+    {
+      "id": "q-006",
+      "category": "paraphrase",
+      "query": "who signs off before we ship to production on a Friday?",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"]
+    },
+    {
+      "id": "q-007",
+      "category": "temporal",
+      "query": "which expense policy applies after January 2026?",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"]
+    },
+    {
+      "id": "q-008",
+      "category": "temporal",
+      "query": "latest version of the incident response runbook",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"]
+    },
+    {
+      "id": "q-009",
+      "category": "permission",
+      "query": "quarterly revenue recognition guidance",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"],
+      "filters": {"metadata": {"team": "finance"}}
+    },
+    {
+      "id": "q-010",
+      "category": "permission",
+      "query": "onboarding checklist for contractors",
+      "expected_document_ids": ["REPLACE_WITH_DOCUMENT_ID"],
+      "filters": {"source": "pdf", "tags": ["hr"]}
+    }
+  ]
+}

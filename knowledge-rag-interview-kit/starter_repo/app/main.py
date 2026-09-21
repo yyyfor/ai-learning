@@ -11,7 +11,11 @@ from app.api.errors import document_not_found_handler
 from app.api.workspace import STATIC_DIR
 from app.cache import RedisSearchCache
 from app.repositories.documents import PostgresDocumentRepository
+from app.retrieval.chunk_index import ElasticsearchChunkIndex
 from app.retrieval.elasticsearch_index import ElasticsearchSearchIndex
+from app.retrieval.query_rewrite import OllamaQueryRewriter
+from app.retrieval.rerank import build_reranker
+from app.services.hybrid import HybridRetrievalService
 from app.services.knowledge import DocumentNotFoundError, KnowledgeService
 from app.services.rag import RagService
 from app.retrieval.local_models import OllamaModels
@@ -74,6 +78,7 @@ async def lifespan(application: FastAPI):
 
     models = None
     vector_index = None
+    chunk_index = None
     try:
         await repository.connect()
         await cache.connect()
@@ -93,8 +98,28 @@ async def lifespan(application: FastAPI):
             vector_index = QdrantIndex(
                 os.getenv("QDRANT_URL", "http://localhost:6333"), models.embedding_model
             )
-            application.state.rag_service = RagService(service, models, vector_index)
+            # Week 4: lexical candidates over chunks, in the free Elasticsearch
+            # tier. No semantic_text, no inference, no licensed retriever; the
+            # fusion and reranking happen in app/services/hybrid.py.
+            chunk_index = ElasticsearchChunkIndex(
+                os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"),
+                os.getenv("ELASTICSEARCH_CHUNK_INDEX", "knowledge-chunks"),
+            )
+            await chunk_index.connect()
+            await chunk_index.ensure_index()
+            hybrid = HybridRetrievalService(
+                chunk_index,
+                vector_index,
+                models,
+                reranker=build_reranker(os.getenv("RERANKER", "ollama"), models),
+                rewriter=OllamaQueryRewriter(models),
+                rrf_k=int(os.getenv("RRF_K", "60")),
+            )
+            application.state.rag_service = RagService(
+                service, models, vector_index, hybrid, chunk_index
+            )
             service.vector_index = vector_index
+            service.chunk_index = chunk_index
         logger.info("knowledge_api_started")
         yield
     finally:
@@ -103,6 +128,8 @@ async def lifespan(application: FastAPI):
             await models.close()
         if vector_index is not None:
             await vector_index.close()
+        if chunk_index is not None:
+            await chunk_index.close()
         await cache.close()
         await search_index.close()
         await repository.close()
