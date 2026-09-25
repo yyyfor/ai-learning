@@ -68,6 +68,8 @@ class Citation(BaseModel):
     source: str
     page: int
     text: str
+    version: int | None = None
+    source_uri: str | None = None
     # The score for the requested mode: rerank score when reranked, otherwise
     # cosine for vector mode, BM25 for bm25 mode, and the RRF score for hybrid.
     score: float
@@ -85,6 +87,7 @@ class RagQueryResponse(BaseModel):
     context: str
     citations: list[Citation]
     model: str
+    retrieved_document_ids: list[str] = Field(default_factory=list)
     mode: str = "hybrid"
     variants: list[str] = Field(default_factory=list)
     reranked: bool = False

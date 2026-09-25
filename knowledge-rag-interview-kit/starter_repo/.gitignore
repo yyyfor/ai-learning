@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 .playwright-cli/
 output/playwright/
+eval/lab9-dataset.json
+eval/generation-result.json

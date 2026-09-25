@@ -37,6 +37,53 @@ function errorMessage(error) {
   return error.message;
 }
 
+const controlUrl = `http://${location.hostname === 'localhost' ? 'localhost' : '127.0.0.1'}:8001`;
+let serverBusy = false;
+
+async function loadServerStatus() {
+  $('server-control-link').href = controlUrl;
+  try {
+    const response = await fetch(`${controlUrl}/api/status`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Control page unavailable');
+    const status = await response.json();
+    $('server-controller').textContent = 'Online · port 8001';
+    $('server-backend').textContent = status.backend;
+    $('server-frontend').textContent = status.frontend;
+    $('server-dependencies').textContent = status.health
+      ? ['storage', 'cache', 'search'].map((key) => status.health[key] === 'ok' ? 'OK' : 'Unavailable').join(' / ')
+      : 'Waiting for API';
+    $('server-start').disabled = serverBusy || status.managed || status.backend === 'external';
+    $('server-stop').disabled = serverBusy || !status.managed;
+    if (status.backend === 'external') $('server-message').textContent = 'This API was started outside the control page. Stop it in its terminal before using these buttons.';
+  } catch {
+    $('server-controller').textContent = 'Offline';
+    $('server-backend').textContent = 'Running (this page is available)';
+    $('server-frontend').textContent = 'Available';
+    $('server-dependencies').textContent = 'See Connections in the sidebar';
+    $('server-start').disabled = $('server-stop').disabled = true;
+    $('server-message').textContent = 'Start scripts/start_local.sh to enable browser controls.';
+  }
+}
+
+async function serverAction(action) {
+  serverBusy = true;
+  $('server-start').disabled = $('server-stop').disabled = true;
+  try {
+    const response = await fetch(`${controlUrl}/api/${action}`, { method: 'POST' });
+    const result = await response.json();
+    $('server-message').textContent = result.message;
+  } catch (error) {
+    $('server-message').textContent = errorMessage(error);
+  } finally {
+    serverBusy = false;
+    await loadServerStatus();
+  }
+}
+
+$('server-start').addEventListener('click', () => serverAction('start'));
+$('server-stop').addEventListener('click', () => serverAction('stop'));
+$('server-refresh').addEventListener('click', loadServerStatus);
+
 function notice(message, error = false) {
   $('notice').textContent = message;
   $('notice').className = error ? 'error' : '';
@@ -426,7 +473,7 @@ $('rag-form').addEventListener('submit', async (event) => {
 });
 
 function navigate() {
-  const names = { documents: 'Documents', search: 'Search & query', rag: 'RAG answers', redis: 'Redis cache', elastic: 'Elasticsearch' };
+  const names = { documents: 'Documents', search: 'Search & query', rag: 'RAG answers', redis: 'Redis cache', elastic: 'Elasticsearch', server: 'Server status' };
   state.view = Object.hasOwn(names, location.hash.slice(1)) ? location.hash.slice(1) : 'documents';
   document.querySelectorAll('.view').forEach((view) => { view.hidden = view.id !== `view-${state.view}`; });
   document.querySelectorAll('[data-view]').forEach((link) => {
@@ -438,6 +485,7 @@ function navigate() {
   if (state.view === 'redis') loadRedis();
   if (state.view === 'elastic') loadElastic();
   if (state.view === 'rag') loadRagStatus();
+  if (state.view === 'server') loadServerStatus();
   loadHealth();
 }
 

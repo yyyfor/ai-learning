@@ -23,6 +23,8 @@ class RetrievalFilters:
     source: str | None = None
     tags: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
+    # Server-computed ACL/lifecycle allowlist. None = unrestricted; [] = deny all.
+    document_ids: list[str] | None = None
 
     def cache_key(self) -> str:
         parts = [self.source or "", ",".join(sorted(self.tags))]

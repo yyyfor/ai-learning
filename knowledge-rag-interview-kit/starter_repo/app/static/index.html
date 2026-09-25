@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Knowledge Studio</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/static/style.css?v=20260919-3">
-  <script src="/static/app.js?v=20260919-3" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=20260921-1">
+  <script src="/static/app.js?v=20260921-1" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to workspace</a>
@@ -21,6 +21,8 @@
       <p class="nav-label">DATA EXPLORER</p>
       <a href="#redis" data-view="redis"><span aria-hidden="true">◷</span> Redis cache</a>
       <a href="#elastic" data-view="elastic"><span aria-hidden="true">⌘</span> Elasticsearch <span class="nav-note">Kibana</span></a>
+      <p class="nav-label">LOCAL SERVICES</p>
+      <a href="#server" data-view="server"><span aria-hidden="true">◉</span> Server status</a>
     </nav>
     <div class="sidebar-bottom"><span class="small-label">CONNECTIONS</span><div id="connections">Checking services…</div><a href="/docs" target="_blank" rel="noopener">Backend API docs ↗</a></div>
   </aside>
@@ -37,6 +39,17 @@
         <div class="table-wrap"><table id="documents-table" hidden><thead><tr><th>Document</th><th>Source</th><th>Tags</th><th>Created</th></tr></thead><tbody id="documents-body"></tbody></table></div>
         <div class="pagination"><span id="documents-page">Page 1</span><div><button id="documents-prev" disabled>← Previous</button><button id="documents-next" disabled>Next →</button></div></div>
         <div class="footnote"><span class="dot"></span> Create once. Stored in PostgreSQL and indexed in Elasticsearch.</div>
+      </section>
+
+      <section id="view-server" class="view" aria-labelledby="server-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LOCAL SERVICES</p><h1 id="server-title">Server status</h1><p>Check the API and the frontend it serves.</p></div><button id="server-refresh" type="button">↻ Refresh status</button></div>
+        <div class="server-row"><strong>Control page</strong><span id="server-controller">Checking…</span></div>
+        <div class="server-row"><strong>Backend API</strong><span id="server-backend">Checking…</span></div>
+        <div class="server-row"><strong>Frontend</strong><span id="server-frontend">Checking…</span></div>
+        <div class="server-row"><strong>PostgreSQL / Redis / Elasticsearch</strong><span id="server-dependencies">Checking…</span></div>
+        <div class="server-actions"><button id="server-start" class="primary" type="button" disabled>Start server</button><button id="server-stop" type="button" disabled>Stop server</button><a id="server-control-link" class="button" target="_blank" rel="noopener">Open control page ↗</a></div>
+        <p id="server-message" class="helper" role="status" aria-live="polite"></p>
+        <p class="helper">The frontend runs inside FastAPI. If you stop the API, use the separate control page on port 8001 to start it again. Docker and Ollama are managed separately.</p>
       </section>
 
       <section id="view-search" class="view" aria-labelledby="search-title" hidden>

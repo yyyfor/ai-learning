@@ -48,12 +48,17 @@ services:
       - elasticsearch
 
   neo4j:
-    image: neo4j:5
+    # DaoCloud rejected this image during verification; override if a mirror works locally.
+    image: ${NEO4J_IMAGE:-neo4j:5}
+    profiles: [graph]
     environment:
       NEO4J_AUTH: neo4j/password123
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    volumes:
+      - neo4j_data:/data
 
 volumes:
   qdrant_data:
+  neo4j_data:

@@ -4,6 +4,12 @@
 
 ## 新人从这里开始
 
+- [Lab 4 完整学习指南](labs/lab04_hybrid_retrieval.md)：原理、调用链、RRF 手算、API 实验与评估。
+- [Labs 6/8/9/10/11 动手指南](labs/labs06_08_09_10_11.md)：GraphRAG、治理、生成评估、安全观测、带审批的本地 Agent。
+
+以上编号按 hands-on labs（与后半段 roadmap 的 week 编号不同）。新 API 可在 `/docs` 操作；
+GraphRAG 可选开启，无需云 API key。安全/严格治理默认关闭，保持已有本地学习流程兼容。
+
 先读 [New Joiner Guide](NEW_JOINER_GUIDE.md)：从启动项目、阅读真实目录结构，
 到跟踪文档写入、检索和缓存的完整流程，再通过小练习理解各层职责。
 这份指南对应当前实现，包含前端、数据检查页、语义检索开关和后续学习路线。
@@ -89,6 +95,24 @@ cache            Redis TTL 搜索缓存
 ```
 
 ## 本地运行
+
+### 一键启动与服务控制
+
+本项目的前端是 FastAPI 提供的静态页面，没有单独的前端服务。已有 Docker 服务运行时，在 `starter_repo` 目录执行：
+
+```bash
+sh scripts/start_local.sh
+```
+
+脚本使用 `.venv` 启动 API（默认 `RAG_ENABLED=true`），并在独立端口保留控制页面：
+
+- 应用前端和后端 API：**http://127.0.0.1:8000/**
+- 即使 API 停止仍可使用的控制页面：**http://127.0.0.1:8001/**
+- 应用内的 **Server status** 页面也可查看状态、启动或停止 API。
+
+首次启动时同步 Elasticsearch 索引可能需要几分钟。控制页面显示 `starting` 时请等待；按 `Ctrl+C` 会同时关闭控制页面及其启动的 API。若 8000 端口已被其他终端启动的 API 占用，控制页面只显示 `external`，不会关闭那个进程；请先在原终端停止它。此脚本不会启动或关闭 Docker、Ollama。需要关闭 RAG 时可运行 `RAG_ENABLED=false sh scripts/start_local.sh`。
+
+首次使用前先按照下面的步骤创建 `.venv` 并安装依赖。
 
 先启动仓库已有的 Docker 服务：
 

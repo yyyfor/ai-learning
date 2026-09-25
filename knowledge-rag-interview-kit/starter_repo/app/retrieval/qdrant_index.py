@@ -71,6 +71,8 @@ def build_filters(filters: RetrievalFilters) -> list[dict[str, Any]]:
     conditions: list[dict[str, Any]] = [
         {"key": "tags", "match": {"value": tag}} for tag in filters.tags
     ]
+    if filters.document_ids is not None:
+        conditions.append({"key": "document_id", "match": {"any": filters.document_ids}})
     if filters.source is not None:
         conditions.append({"key": "source", "match": {"value": filters.source}})
     for key, value in filters.metadata.items():

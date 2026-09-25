@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knowledge Studio · Server control</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { font: 15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#202936; background:#f8f9fb; }
+    * { box-sizing:border-box; }
+    body { margin:0; }
+    header { background:#fff; border-bottom:1px solid #e3e7ed; padding:18px max(24px,calc((100vw - 720px)/2)); font-weight:650; }
+    header span { color:#345ddd; font-size:21px; margin-right:10px; }
+    main { max-width:720px; margin:70px auto; padding:0 24px; }
+    .eyebrow { font-size:11px; letter-spacing:1.5px; color:#687383; font-weight:700; }
+    h1 { font-size:32px; letter-spacing:-.8px; margin:8px 0; }
+    p { color:#687383; margin:0 0 25px; }
+    .row { display:flex; justify-content:space-between; gap:20px; border-bottom:1px solid #e3e7ed; padding:18px 0; }
+    .row strong { font-weight:600; }
+    .value { color:#345ddd; text-align:right; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin:26px 0 15px; }
+    button,a.button { font:inherit; font-weight:550; text-decoration:none; cursor:pointer; border:1px solid #d6dce6; border-radius:7px; background:#fff; color:#202936; padding:9px 15px; }
+    button.primary { background:#345ddd; border-color:#345ddd; color:white; }
+    button:disabled,a.disabled { opacity:.45; cursor:default; pointer-events:none; }
+    #message { min-height:24px; margin:14px 0; color:#536074; }
+    small { display:block; margin-top:28px; color:#687383; }
+  </style>
+</head>
+<body>
+  <header><span>k.</span> Knowledge Studio</header>
+  <main>
+    <div class="eyebrow">LOCAL WORKSPACE</div>
+    <h1>Server control</h1>
+    <p>The frontend is served by FastAPI. This page stays available when the API is stopped.</p>
+    <div class="row"><strong>Control page</strong><span class="value">Online · port 8001</span></div>
+    <div class="row"><strong>Backend API</strong><span class="value" id="backend">Checking…</span></div>
+    <div class="row"><strong>Frontend</strong><span class="value" id="frontend">Checking…</span></div>
+    <div class="row"><strong>PostgreSQL / Redis / Elasticsearch</strong><span class="value" id="dependencies">Checking…</span></div>
+    <div class="actions">
+      <button class="primary" id="start" type="button">Start server</button>
+      <button id="stop" type="button">Stop server</button>
+      <button id="refresh" type="button">Refresh status</button>
+      <a class="button disabled" id="open-app" href="http://127.0.0.1:8000/" target="_blank" rel="noopener">Open app ↗</a>
+    </div>
+    <div id="message" role="status" aria-live="polite"></div>
+    <small>Only APIs launched by this control page can be stopped here. Docker and Ollama are managed separately. Initial indexing may take a few minutes.</small>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let busy = false;
+    async function refresh() {
+      try {
+        const response = await fetch('/api/status', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Controller unavailable');
+        const status = await response.json();
+        $('backend').textContent = status.backend;
+        $('frontend').textContent = status.frontend;
+        const health = status.health;
+        $('dependencies').textContent = health
+          ? ['storage', 'cache', 'search'].map(key => health[key] === 'ok' ? 'OK' : 'Unavailable').join(' / ')
+          : 'Waiting for API';
+        $('start').disabled = busy || status.managed || status.backend === 'external';
+        $('stop').disabled = busy || !status.managed;
+        $('open-app').classList.toggle('disabled', status.frontend !== 'available');
+        if (status.backend === 'external') $('message').textContent = 'Port 8000 is in use by an API started elsewhere. Stop it in its terminal to manage it here.';
+      } catch (error) {
+        $('message').textContent = error.message;
+      }
+    }
+    async function action(name) {
+      busy = true;
+      $('start').disabled = $('stop').disabled = true;
+      try {
+        const response = await fetch('/api/' + name, { method: 'POST' });
+        const result = await response.json();
+        $('message').textContent = result.message;
+      } catch (error) {
+        $('message').textContent = error.message;
+      } finally {
+        busy = false;
+        await refresh();
+      }
+    }
+    $('start').onclick = () => action('start');
+    $('stop').onclick = () => action('stop');
+    $('refresh').onclick = refresh;
+    refresh();
+    setInterval(refresh, 3000);
+  </script>
+</body>
+</html>

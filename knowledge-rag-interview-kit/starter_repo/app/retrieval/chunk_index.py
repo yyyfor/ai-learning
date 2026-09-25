@@ -167,6 +167,8 @@ class ElasticsearchChunkIndex:
 def build_filters(filters: RetrievalFilters) -> list[dict[str, Any]]:
     """Translate shared filters into Elasticsearch filter clauses."""
     clauses: list[dict[str, Any]] = []
+    if filters.document_ids is not None:
+        clauses.append({"terms": {"document_id": filters.document_ids}})
     if filters.source:
         clauses.append({"term": {"source": filters.source}})
     # One clause per tag: all requested tags must be present.

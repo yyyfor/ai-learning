@@ -25,7 +25,7 @@ dev = [
   "sqlalchemy",
 ]
 graph = [
-  "neo4j",
+  "neo4j>=5.28,<7",
 ]
 agent = [
   "openai-agents",

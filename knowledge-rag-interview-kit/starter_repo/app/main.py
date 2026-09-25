@@ -1,9 +1,12 @@
 import json
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
 
 from app.api import router
@@ -20,6 +23,11 @@ from app.services.knowledge import DocumentNotFoundError, KnowledgeService
 from app.services.rag import RagService
 from app.retrieval.local_models import OllamaModels
 from app.retrieval.qdrant_index import QdrantIndex
+from app.repositories.platform import PlatformRepository
+from app.services.governance import GovernanceService
+from app.security import authenticate, enabled, principal, require_role
+from app.observability import current_trace, new_trace, traces
+from app.agent.runtime import AgentRuntime
 
 
 class JsonFormatter(logging.Formatter):
@@ -37,6 +45,9 @@ class JsonFormatter(logging.Formatter):
 
 
 def configure_logging() -> None:
+    # Uvicorn's default access log includes the raw query string. Our middleware
+    # logs route templates + trace IDs instead, keeping search text out of logs.
+    logging.getLogger("uvicorn.access").disabled = True
     logger = logging.getLogger("knowledge_api")
     if logger.handlers:
         return
@@ -79,6 +90,7 @@ async def lifespan(application: FastAPI):
     models = None
     vector_index = None
     chunk_index = None
+    graph_service = None
     try:
         await repository.connect()
         await cache.connect()
@@ -86,6 +98,12 @@ async def lifespan(application: FastAPI):
         await search_index.ensure_index()
 
         service = KnowledgeService(repository, search_index, cache)
+        store = PlatformRepository(repository._pool())
+        await store.initialize()
+        governance_service = GovernanceService(store, repository)
+        service.governance = governance_service
+        application.state.platform_store = store
+        application.state.governance = governance_service
         await service.initialize()
         await cache.clear()
         application.state.knowledge_service = service
@@ -118,12 +136,22 @@ async def lifespan(application: FastAPI):
             application.state.rag_service = RagService(
                 service, models, vector_index, hybrid, chunk_index
             )
+            application.state.rag_service.governance = governance_service
+            application.state.agent = AgentRuntime(store, application.state.rag_service)
+            if enabled("GRAPH_ENABLED"):
+                from app.services.graph import GraphService
+                graph_service = GraphService(governance_service, application.state.rag_service)
+                application.state.graph = graph_service
             service.vector_index = vector_index
             service.chunk_index = chunk_index
         logger.info("knowledge_api_started")
         yield
     finally:
         application.state.rag_service = None
+        application.state.agent = None
+        application.state.graph = None
+        if graph_service is not None:
+            await graph_service.close()
         if models is not None:
             await models.close()
         if vector_index is not None:
@@ -139,8 +167,9 @@ async def lifespan(application: FastAPI):
 app = FastAPI(
     title="Enterprise Knowledge & RAG Studio",
     version="0.1.0",
-    description="Week 1–3 Knowledge Platform API with optional local Vector RAG",
+    description="Knowledge API, hybrid/graph RAG, governance, evaluation and local agents",
     lifespan=lifespan,
+    dependencies=[Depends(HTTPBearer(auto_error=False))],
 )
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -150,11 +179,41 @@ app.add_exception_handler(DocumentNotFoundError, document_not_found_handler)
 
 @app.middleware("http")
 async def log_request(request: Request, call_next):
-    response = await call_next(request)
-    logger.info(
-        "request_complete method=%s path=%s status=%s",
-        request.method,
-        request.url.path,
-        response.status_code,
-    )
-    return response
+    started = time.perf_counter()
+    trace = new_trace()
+    trace_token = current_trace.set(trace)
+    identity_token = None
+    status = 500
+    try:
+        path = request.url.path
+        public = path in {"/", "/docs", "/openapi.json", "/redoc", "/health"} or path.startswith("/static/")
+        if not public:
+            identity_token = principal.set(authenticate(request.headers.get("authorization", "")))
+            if path.startswith(("/inspector/", "/observability/")):
+                require_role("admin")
+            if enabled("SECURITY_ENABLED") and path.startswith("/inspector/"):
+                raise HTTPException(403, "Raw inspectors are disabled in security mode; use ACL-filtered document APIs")
+            readonly_posts = {"/search", "/query", "/rag/query", "/rag/hybrid", "/rag/chunks/preview",
+                              "/graph/query", "/graph/compare", "/governance/citations/validate",
+                              "/agent/runs", "/evaluation/run"}
+            if request.method not in {"GET", "HEAD", "OPTIONS"} and path not in readonly_posts:
+                require_role("admin", "editor", "approver")
+                if path.startswith(("/documents", "/rag/pdf", "/rag/documents", "/graph/documents")):
+                    require_role("admin", "editor")
+        response = await call_next(request)
+        status = response.status_code
+        response.headers["X-Trace-ID"] = trace["id"]
+        return response
+    except HTTPException as exc:
+        status = exc.status_code
+        return JSONResponse({"detail": exc.detail}, status_code=status, headers={"X-Trace-ID": trace["id"]})
+    finally:
+        route = request.scope.get("route")
+        trace.update({"route": getattr(route, "path", "unmatched"), "method": request.method,
+                      "status": status, "latency_ms": round((time.perf_counter()-started)*1000, 2)})
+        if not request.url.path.startswith(("/static/", "/observability/")):
+            traces.append(trace)
+        logger.info("request_complete trace=%s route=%s status=%s", trace["id"], trace["route"], status)
+        current_trace.reset(trace_token)
+        if identity_token is not None:
+            principal.reset(identity_token)

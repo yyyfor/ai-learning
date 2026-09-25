@@ -10,6 +10,7 @@ from app.repositories.documents import (
 from app.domain.documents import StoredDocument
 from app.domain.search import SearchHit, SearchPage
 from app.dto.documents import DocumentCreate
+from app.security import enabled, principal
 
 
 class DocumentNotFoundError(Exception):
@@ -52,6 +53,7 @@ class KnowledgeService:
         self.cache = cache
         self.vector_index = None
         self.chunk_index = None
+        self.governance = None
 
     async def initialize(self) -> None:
         # This makes an existing PostgreSQL dataset searchable after a fresh
@@ -59,6 +61,8 @@ class KnowledgeService:
         await self.search_index.rebuild(await self.repository.all())
 
     async def create_document(self, payload: DocumentCreate) -> StoredDocument:
+        if enabled("SECURITY_ENABLED"):
+            payload.metadata["tenant"] = principal.get().tenant
         document = StoredDocument(
             id=str(uuid4()),
             title=payload.title,
@@ -79,12 +83,18 @@ class KnowledgeService:
         return document
 
     async def list_documents(self, page: int, page_size: int) -> list[StoredDocument]:
+        if self.governance is not None and enabled("SECURITY_ENABLED"):
+            allowed = set(await self.governance.allowed_ids(published=False))
+            docs = [d for d in reversed(await self.repository.all()) if d.id in allowed]
+            return docs[(page-1)*page_size:page*page_size]
         return await self.repository.list(
             limit=page_size,
             offset=(page - 1) * page_size,
         )
 
     async def get_document(self, document_id: str) -> StoredDocument:
+        if self.governance is not None and enabled("SECURITY_ENABLED"):
+            return await self.governance.document(document_id)
         document = await self.repository.get(document_id)
         if document is None:
             raise DocumentNotFoundError(document_id)
@@ -110,6 +120,9 @@ class KnowledgeService:
         page: int,
         page_size: int,
     ) -> SearchPage:
+        allowed = None
+        if self.governance is not None and (enabled("SECURITY_ENABLED") or enabled("GOVERNANCE_ENABLED")):
+            allowed = await self.governance.allowed_ids()
         cache_key = json.dumps(
             {
                 "query": query,
@@ -118,6 +131,7 @@ class KnowledgeService:
                 "metadata": metadata,
                 "page": page,
                 "page_size": page_size,
+                "allowed_ids": sorted(allowed) if allowed is not None else None,
             },
             sort_keys=True,
             ensure_ascii=False,
@@ -126,6 +140,7 @@ class KnowledgeService:
         if cached is not None:
             return SearchPage.from_dict(cached)
 
+        access = {"document_ids": allowed} if allowed is not None else {}
         raw_results, total = await self.search_index.search(
             query=query,
             source=source,
@@ -133,6 +148,7 @@ class KnowledgeService:
             metadata=metadata,
             limit=page_size,
             offset=(page - 1) * page_size,
+            **access,
         )
         page_result = SearchPage(
             query=query,

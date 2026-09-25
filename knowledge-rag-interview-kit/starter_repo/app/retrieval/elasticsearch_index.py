@@ -116,8 +116,11 @@ class ElasticsearchSearchIndex:
         metadata: dict[str, Any],
         limit: int,
         offset: int,
+        document_ids: list[str] | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         filters: list[dict[str, Any]] = []
+        if document_ids is not None:
+            filters.append({"ids": {"values": document_ids}})
         if source:
             filters.append({"term": {"source": source}})
         if tags:

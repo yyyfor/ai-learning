@@ -26,6 +26,7 @@ from app.domain.retrieval import RetrievalFilters, RetrievedChunk
 from app.retrieval.fusion import DEFAULT_RRF_K, Ranking, reciprocal_rank_fusion
 from app.retrieval.query_rewrite import NoopQueryRewriter
 from app.retrieval.rerank import NoopReranker
+from app.observability import span
 
 logger = logging.getLogger("knowledge_api")
 
@@ -187,9 +188,10 @@ class HybridRetrievalService:
         if request.rerank and candidates and self.reranker.name != "none":
             stage = time.perf_counter()
             pool_size = min(len(candidates), max(request.top_k, request.top_k * self.rerank_multiplier))
-            ordered, rerank_warnings = await self.reranker.rerank(
-                request.query, candidates[:pool_size], request.top_k
-            )
+            with span("reranker"):
+                ordered, rerank_warnings = await self.reranker.rerank(
+                    request.query, candidates[:pool_size], request.top_k
+                )
             warnings.extend(rerank_warnings)
             reranked = not rerank_warnings
             hits = ordered
