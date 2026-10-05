@@ -5,3 +5,5 @@ __pycache__/
 output/playwright/
 eval/lab9-dataset.json
 eval/generation-result.json
+var/
+eval/agent-suite-*.json

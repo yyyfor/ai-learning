@@ -28,9 +28,10 @@ graph = [
   "neo4j>=5.28,<7",
 ]
 agent = [
-  "openai-agents",
-  "langgraph",
-  "mcp",
+  "langgraph>=1.0",                 # Lab 12 state graph
+  "langgraph-checkpoint-sqlite",    # durable checkpoints survive a killed process
+  "mcp>=2",                         # Lab 12 read-only MCP server (MCPServer API, v2)
+  "openai-agents",                  # optional: compare with a second framework
 ]
 
 [tool.setuptools.packages.find]

@@ -17,6 +17,7 @@
 
 ## 建议使用方式
 
+- **零基础 / 双岗位（RAG 平台 + AI Agent）**：按 [08_beginner_step_by_step.md](08_beginner_step_by_step.md) 的 16 周计划逐步完成；用 [07_agent_interview_prep_guide.md](07_agent_interview_prep_guide.md) 和双语网页 `study_site/index.html` 自测。
 - 新加入项目：先读 [New Joiner Guide](starter_repo/NEW_JOINER_GUIDE.md)，跑通当前实现，再按路线扩展。
 - 第一轮：按 `01_roadmap.md` 学习 12 周。
 - 第二轮：每周完成 `03_hands_on_labs.md` 对应实验。

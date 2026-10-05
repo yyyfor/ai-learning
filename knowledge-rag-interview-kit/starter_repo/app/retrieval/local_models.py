@@ -1,3 +1,5 @@
+import json
+
 import httpx
 from app.observability import record_usage, span
 
@@ -9,11 +11,16 @@ ANSWER_SYSTEM_PROMPT = (
 )
 
 
+class ToolCallingUnsupported(RuntimeError):
+    """The configured model cannot do native tool calls; pick a tool-capable one."""
+
+
 class OllamaModels:
-    def __init__(self, url: str, embedding_model: str, chat_model: str):
+    def __init__(self, url: str, embedding_model: str, chat_model: str, tool_model: str | None = None):
         self.client = httpx.AsyncClient(base_url=url, timeout=180)
         self.embedding_model = embedding_model
         self.chat_model = chat_model
+        self.tool_model = tool_model or chat_model
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         vectors = []
@@ -63,6 +70,47 @@ class OllamaModels:
             body = response.json()
             record_usage(body)
             return body["message"]["content"].strip()
+
+    async def chat_tools(
+        self,
+        system: str,
+        user: str,
+        tools: list[dict],
+        *,
+        num_predict: int = 800,
+        num_ctx: int = 8192,
+    ) -> dict:
+        """Native tool calling: the model returns zero or more tool calls, or text.
+
+        The model only *proposes* calls; the caller validates and executes them.
+        Needs a tool-capable model (OLLAMA_TOOL_MODEL, e.g. qwen2.5 or llama3.1).
+        """
+        payload = {
+            "model": self.tool_model,
+            "stream": False,
+            "options": {"temperature": 0, "num_predict": num_predict, "num_ctx": num_ctx},
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "tools": tools,
+        }
+        with span("llm"):
+            response = await self.client.post("/api/chat", json=payload)
+            if response.status_code == 400 and "does not support tools" in response.text:
+                raise ToolCallingUnsupported(self.tool_model)
+            response.raise_for_status()
+            body = response.json()
+            record_usage(body)
+        message = body["message"]
+        calls = []
+        for call in message.get("tool_calls") or []:
+            function = call.get("function") or {}
+            arguments = function.get("arguments") or {}
+            if isinstance(arguments, str):  # Some servers send JSON text, others objects.
+                arguments = json.loads(arguments)
+            calls.append({"name": function.get("name", ""), "arguments": arguments})
+        return {"content": (message.get("content") or "").strip(), "tool_calls": calls}
 
     async def answer(self, question: str, context: str) -> str:
         answer = await self.complete(

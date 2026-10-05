@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from app.dto.agent_lab import AgentApproval, AgentStart
-from app.agent.runtime import TOOLS
+from app.agent.runtime import RISK, TOOL_DESCRIPTIONS, TOOLS
 from app.security import principal
 
 router = APIRouter(prefix="/agent", tags=["Lab 11 Agent"])
@@ -15,9 +15,8 @@ def service(request):
 
 @router.get("/tools")
 async def tools():
-    return [{"name": name, "schema": model.model_json_schema(),
-             "risk": "internal_write" if name == "create_follow_up" else "read_only"}
-            for name, model in TOOLS.items()]
+    return [{"name": name, "description": TOOL_DESCRIPTIONS[name], "schema": model.model_json_schema(),
+             "risk": RISK[name]} for name, model in TOOLS.items()]
 
 
 @router.post("/runs")
@@ -33,6 +32,24 @@ async def get_run(run_id: str, request: Request):
 @router.post("/runs/{run_id}/approval")
 async def approve(run_id: str, payload: AgentApproval, request: Request):
     return await service(request).approve(run_id, payload)
+
+
+@router.post("/runs/{run_id}/resume")
+async def resume(run_id: str, request: Request):
+    return await service(request).resume(run_id)
+
+
+@router.get("/memories")
+async def memories(request: Request):
+    who = principal.get()
+    return await request.app.state.agent_memory.mine(who.tenant, who.user)
+
+
+@router.delete("/memories/{memory_id}", status_code=204)
+async def forget(memory_id: str, request: Request):
+    who = principal.get()
+    if not await request.app.state.agent_memory.forget(who.tenant, who.user, memory_id):
+        raise HTTPException(404, "Memory not found")
 
 
 @router.get("/followups")

@@ -1,0 +1,500 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG &amp; Agent Interview Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+SC:wght@400;500;600&display=swap">
+<style>
+:root {
+  --ground: #f3f4f1;
+  --surface: #ffffff;
+  --sunken: #eceee9;
+  --ink: #1c2321;
+  --muted: #5b6762;
+  --line: #d9ded7;
+  --accent: #2b5f8a;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2ebf3;
+  --star: #a86f12;
+  --good: #2f7a4c;
+  --good-soft: #e1f0e6;
+  --review: #b0501b;
+  --review-soft: #f7e6dc;
+  --code-bg: #f0f2ee;
+  --shadow: 0 1px 2px rgba(28, 35, 33, .06), 0 4px 16px rgba(28, 35, 33, .05);
+  --sans: "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --display: "IBM Plex Sans Condensed", "IBM Plex Sans", "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #111514; --surface: #181d1c; --sunken: #141817; --ink: #e4e9e6; --muted: #98a49f;
+    --line: #2b3331; --accent: #86b0d8; --accent-ink: #0f1a24; --accent-soft: #1c2934;
+    --star: #d9a441; --good: #6cc08e; --good-soft: #17291f; --review: #e38a5a; --review-soft: #2e1d14;
+    --code-bg: #1f2523; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #111514; --surface: #181d1c; --sunken: #141817; --ink: #e4e9e6; --muted: #98a49f;
+  --line: #2b3331; --accent: #86b0d8; --accent-ink: #0f1a24; --accent-soft: #1c2934;
+  --star: #d9a441; --good: #6cc08e; --good-soft: #17291f; --review: #e38a5a; --review-soft: #2e1d14;
+  --code-bg: #1f2523; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 0 64px; }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--ground); border-bottom: 1px solid var(--line); }
+.top-inner { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 0; display: grid; gap: 10px; }
+.brand-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-family: var(--display); font-weight: 600; font-size: 22px; line-height: 1.2; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.brand .loop { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.lang { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.lang button { border: 0; background: transparent; color: var(--muted); font: 500 13px var(--sans); padding: 6px 12px; cursor: pointer; }
+.lang button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+nav.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs button { flex: none; border: 0; background: none; color: var(--muted); font: 500 14px var(--sans); padding: 8px 12px 10px; cursor: pointer; border-bottom: 2px solid transparent; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+section.panel { padding-top: 20px; display: grid; gap: 16px; }
+.lede { color: var(--muted); max-width: 68ch; margin: 0; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0; text-wrap: balance; }
+h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar input[type="search"], .toolbar select { font: 14px var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+.toolbar input[type="search"] { flex: 1 1 220px; }
+.chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font: 500 12.5px var(--sans); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); }
+.chip .n { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 4px; }
+.meter { display: grid; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.meter-row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.meter-row strong { color: var(--ink); font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; }
+.bar .k { background: var(--good); }
+.bar .r { background: var(--review); }
+.qlist { display: grid; gap: 8px; }
+details.q { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.q[open] { box-shadow: var(--shadow); }
+details.q summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: baseline; padding: 12px 14px; }
+details.q summary::-webkit-details-marker { display: none; }
+.qid { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 30px; }
+.qtext { font-weight: 500; }
+.star { color: var(--star); font-size: 12px; margin-right: 4px; }
+.state { font: 500 11px var(--mono); padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.state.known { color: var(--good); background: var(--good-soft); }
+.state.review { color: var(--review); background: var(--review-soft); }
+.answer { padding: 0 14px 14px 54px; display: grid; gap: 10px; }
+.answer p { margin: 0; max-width: 72ch; }
+.answer ul, .answer ol { margin: 0; padding-left: 20px; max-width: 72ch; }
+.answer code, .gloss code, .card code, .story code { font-family: var(--mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+.answer pre { margin: 0; background: var(--code-bg); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; }
+.answer pre code { background: none; padding: 0; }
+.path { font-family: var(--mono); font-size: .88em; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: 500 13px var(--sans); border-radius: 8px; padding: 7px 12px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.btn.good { border-color: var(--good); color: var(--good); }
+.btn.good[aria-pressed="true"] { background: var(--good); color: var(--surface); }
+.btn.rev { border-color: var(--review); color: var(--review); }
+.btn.rev[aria-pressed="true"] { background: var(--review); color: var(--surface); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.empty { color: var(--muted); padding: 24px; text-align: center; background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; display: grid; gap: 14px; min-height: 280px; align-content: start; }
+.card .meta { display: flex; gap: 10px; align-items: center; font-family: var(--mono); font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.card .front { font-family: var(--display); font-weight: 600; font-size: 22px; line-height: 1.35; text-wrap: balance; }
+.card .answer { padding: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+.kbd { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.plan { display: grid; gap: 18px; }
+.phase h3 { font-family: var(--display); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+.weeks { display: grid; gap: 8px; }
+.week { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; grid-template-columns: 56px 1fr; gap: 12px; }
+.week.done { opacity: .72; }
+.wk { font-family: var(--mono); font-size: 12px; color: var(--muted); display: grid; gap: 6px; align-content: start; }
+.wk b { font-family: var(--display); font-size: 24px; color: var(--ink); font-weight: 600; line-height: 1; }
+.week h4 { margin: 0; font-size: 15.5px; font-weight: 600; }
+.week .goal { color: var(--muted); margin: 2px 0 6px; font-size: 14px; }
+.week ol { margin: 0; padding-left: 18px; font-size: 14px; }
+.week .out { margin-top: 8px; font-size: 13px; }
+.week .out span { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-right: 6px; }
+.done-toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); cursor: pointer; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px var(--sans); color: var(--muted); letter-spacing: .04em; text-transform: uppercase; background: var(--sunken); }
+tr:last-child td { border-bottom: 0; }
+td.term { font-weight: 600; min-width: 150px; }
+td.term small { display: block; font-weight: 400; color: var(--muted); }
+td.repo { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 140px; }
+.pitch { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: grid; gap: 10px; }
+.pitch p { margin: 0; max-width: 72ch; }
+.stories { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.story { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.small { font-size: 12.5px; color: var(--muted); }
+@media (max-width: 640px) {
+  .answer { padding-left: 14px; }
+  details.q summary { grid-template-columns: auto 1fr; }
+  details.q summary .state { grid-column: 2; justify-self: start; }
+  .week { grid-template-columns: 1fr; }
+  .wk { grid-auto-flow: column; justify-content: start; align-items: center; }
+  .card .front { font-size: 19px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  details.q[open] .answer { animation: reveal .18s ease-out; }
+  @keyframes reveal { from { opacity: .4; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+}
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand-row">
+      <div class="brand">
+        <h1 id="title">RAG &amp; Agent Interview Lab</h1>
+        <p id="subtitle"></p>
+      </div>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" id="lang-en" aria-pressed="true">EN</button>
+        <button type="button" id="lang-zh" aria-pressed="false">中文</button>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+const UI = {
+  en: {
+    subtitle: "Knowledge / RAG platform + AI agent engineer · questions, flashcards, 16-week plan, glossary",
+    tabs: { questions: "Questions", cards: "Flashcards", plan: "Plan", glossary: "Glossary", project: "Your project" },
+    qLede: "Say your answer out loud first (1–2 minutes), then open the card. ★ marks the questions most likely to come up.",
+    search: "Search questions and answers", all: "All", starred: "★ Starred only",
+    statusAll: "Any status", statusNew: "Not yet marked", statusReview: "To review", statusKnown: "Known",
+    known: "Known", review: "To review", untouched: "Not yet marked", of: "of",
+    knowIt: "Know it", reviewAgain: "Review again", clear: "Clear mark",
+    none: "No questions match these filters.",
+    cardLede: "One question at a time. Space shows the answer, K marks it known, R marks it for review, → skips.",
+    deck: "Deck", dueFirst: "Due first (review, then unmarked)", shuffle: "Shuffle", showAnswer: "Show answer",
+    next: "Next", deckEmpty: "This deck is empty. Change the filters.",
+    planLede: "16 weeks at about 10–12 hours a week. The detailed steps and commands are in 08_beginner_step_by_step.md.",
+    hours: "h", output: "Output", done: "Done",
+    glossLede: "Every term in two sentences or fewer, and where it lives in the repo.",
+    glossSearch: "Search terms", term: "Term", meaning: "Meaning", repo: "In the repo",
+    pitchTitle: "The 2-minute pitch", labsTitle: "What each lab proves", lab: "Lab", topic: "Topic", proof: "Show it with", files: "Read",
+    storiesTitle: "War stories (from your own runs)",
+    storage: "Progress is saved in this browser only."
+  },
+  zh: {
+    subtitle: "知识 / RAG 平台 + AI Agent 工程师 · 面试题、闪卡、16 周计划、术语表",
+    tabs: { questions: "面试题", cards: "闪卡", plan: "学习计划", glossary: "术语表", project: "你的项目" },
+    qLede: "先大声说出你的答案（1–2 分钟），再展开卡片。★ 表示最可能被问到的问题。",
+    search: "搜索问题和答案", all: "全部", starred: "★ 仅星标",
+    statusAll: "全部状态", statusNew: "未标记", statusReview: "待复习", statusKnown: "已掌握",
+    known: "已掌握", review: "待复习", untouched: "未标记", of: "/",
+    knowIt: "已掌握", reviewAgain: "再复习", clear: "清除标记",
+    none: "没有符合筛选条件的问题。",
+    cardLede: "一次一题。空格键显示答案，K 标记已掌握，R 标记待复习，→ 跳过。",
+    deck: "题组", dueFirst: "优先待复习（先复习，再未标记）", shuffle: "随机", showAnswer: "显示答案",
+    next: "下一题", deckEmpty: "当前题组为空，请调整筛选条件。",
+    planLede: "16 周，每周约 10–12 小时。详细步骤和命令见 08_beginner_step_by_step.md。",
+    hours: "小时", output: "产出", done: "完成",
+    glossLede: "每个术语用两句话以内讲清，并标出它在代码中的位置。",
+    glossSearch: "搜索术语", term: "术语", meaning: "含义", repo: "代码位置",
+    pitchTitle: "2 分钟项目介绍", labsTitle: "每个 Lab 证明了什么", lab: "Lab", topic: "主题", proof: "演示方式", files: "阅读",
+    storiesTitle: "实战故事（来自你自己的运行记录）",
+    storage: "学习进度只保存在当前浏览器中。"
+  }
+};
+
+const store = {
+  get(key, fallback) { try { const v = localStorage.getItem("ragAgentLab." + key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; } },
+  set(key, value) { try { localStorage.setItem("ragAgentLab." + key, JSON.stringify(value)); } catch (e) { /* storage unavailable: keep in memory */ } }
+};
+
+const TABS = ["questions", "cards", "plan", "glossary", "project"];
+const state = {
+  lang: store.get("lang", "en"),
+  tab: TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : store.get("tab", "questions"),
+  marks: store.get("marks", {}),
+  weeks: store.get("weeks", {}),
+  q: { search: "", section: "all", starred: false, status: "all" },
+  deck: { section: "all", starred: false, order: "due", queue: [], index: 0, shown: false },
+  gloss: { search: "", group: "all" }
+};
+
+const main = document.getElementById("main");
+const t = () => UI[state.lang];
+const el = (tag, attrs = {}, ...children) => {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k === "html") node.innerHTML = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else if (v !== false && v !== null && v !== undefined) node.setAttribute(k, v === true ? "" : v);
+  }
+  for (const child of children.flat()) if (child !== null && child !== undefined) node.append(child.nodeType ? child : document.createTextNode(child));
+  return node;
+};
+const plain = (html) => { const d = document.createElement("div"); d.innerHTML = html; return d.textContent || ""; };
+const sectionName = (id) => { const s = DATA.sections.find(x => x.id === id); return s ? s[state.lang] : id; };
+const qText = (q) => state.lang === "zh" ? q.q_zh : q.q_en;
+const aHtml = (q) => state.lang === "zh" ? q.a_zh : q.a_en;
+const markOf = (id) => state.marks[id] || null;
+
+function setMark(id, value) {
+  if (value) state.marks[id] = value; else delete state.marks[id];
+  store.set("marks", state.marks);
+}
+
+function matches(q, f) {
+  if (f.section !== "all" && q.section !== f.section) return false;
+  if (f.starred && !q.star) return false;
+  if (f.status && f.status !== "all") {
+    const m = markOf(q.id);
+    if (f.status === "new" && m) return false;
+    if (f.status !== "new" && m !== f.status) return false;
+  }
+  if (f.search) {
+    const needle = f.search.toLowerCase();
+    const hay = (q.id + " " + q.q_en + " " + q.q_zh + " " + plain(q.a_en) + " " + plain(q.a_zh)).toLowerCase();
+    if (!hay.includes(needle)) return false;
+  }
+  return true;
+}
+
+function meter() {
+  const total = DATA.questions.length;
+  const known = DATA.questions.filter(q => markOf(q.id) === "known").length;
+  const review = DATA.questions.filter(q => markOf(q.id) === "review").length;
+  return el("div", { class: "meter" },
+    el("div", { class: "meter-row" },
+      el("span", {}, t().known + " ", el("strong", {}, `${known}`), ` ${t().of} ${total}`),
+      el("span", {}, t().review + " ", el("strong", {}, `${review}`)),
+      el("span", {}, t().untouched + " ", el("strong", {}, `${total - known - review}`))),
+    el("div", { class: "bar", role: "img", "aria-label": `${known} known, ${review} to review, of ${total}` },
+      el("i", { class: "k", style: `width:${known / total * 100}%` }),
+      el("i", { class: "r", style: `width:${review / total * 100}%` })));
+}
+
+function sectionChips(filter, onPick) {
+  const counts = {};
+  DATA.questions.forEach(q => { counts[q.section] = (counts[q.section] || 0) + 1; });
+  const row = el("div", { class: "chip-row", role: "group", "aria-label": "Sections" });
+  row.append(el("button", { type: "button", class: "chip", "aria-pressed": String(filter.section === "all"), onclick: () => onPick("all") }, t().all));
+  DATA.sections.forEach(s => row.append(el("button", { type: "button", class: "chip", "aria-pressed": String(filter.section === s.id), onclick: () => onPick(s.id) },
+    `${s.id} · ${s[state.lang]}`, el("span", { class: "n" }, String(counts[s.id] || 0)))));
+  return row;
+}
+
+function markButtons(q, after) {
+  const m = markOf(q.id);
+  return el("div", { class: "actions" },
+    el("button", { type: "button", class: "btn good", "aria-pressed": String(m === "known"), onclick: () => { setMark(q.id, m === "known" ? null : "known"); after(); } }, t().knowIt),
+    el("button", { type: "button", class: "btn rev", "aria-pressed": String(m === "review"), onclick: () => { setMark(q.id, m === "review" ? null : "review"); after(); } }, t().reviewAgain));
+}
+
+function stateBadge(q) {
+  const m = markOf(q.id);
+  return m ? el("span", { class: "state " + m }, m === "known" ? t().known : t().review) : el("span");
+}
+
+function renderQuestions() {
+  const f = state.q;
+  const open = new Set([...main.querySelectorAll("details.q[open]")].map(d => d.dataset.id));
+  // First visit to this tab: show one answer so the page demonstrates itself.
+  if (!main.querySelector("details.q") && !open.size) open.add(DATA.questions[0].id);
+  const panel = el("section", { class: "panel", id: "panel-questions" });
+  panel.append(el("p", { class: "lede" }, t().qLede), meter());
+  const search = el("input", { type: "search", id: "q-search", placeholder: t().search, value: f.search, "aria-label": t().search });
+  search.addEventListener("input", () => { f.search = search.value; drawList(); });
+  const status = el("select", { id: "q-status", "aria-label": "Status" },
+    ...[["all", t().statusAll], ["new", t().statusNew], ["review", t().statusReview], ["known", t().statusKnown]]
+      .map(([v, label]) => el("option", { value: v, selected: f.status === v }, label)));
+  status.addEventListener("change", () => { f.status = status.value; drawList(); });
+  const starred = el("button", { type: "button", class: "chip", "aria-pressed": String(f.starred), onclick: () => { f.starred = !f.starred; render(); } }, t().starred);
+  panel.append(el("div", { class: "toolbar" }, search, status, starred));
+  panel.append(sectionChips(f, (id) => { f.section = id; render(); }));
+  const list = el("div", { class: "qlist", id: "qlist" });
+  panel.append(list);
+  function drawList() {
+    list.replaceChildren();
+    const items = DATA.questions.filter(q => matches(q, f));
+    if (!items.length) { list.append(el("div", { class: "empty" }, t().none)); return; }
+    items.forEach(q => {
+      const d = el("details", { class: "q", "data-id": q.id, open: open.has(q.id) });
+      const redraw = () => { d.querySelector("summary").replaceWith(summary()); d.querySelector(".actions").replaceWith(markButtons(q, redraw)); refreshMeter(); };
+      const summary = () => el("summary", {},
+        el("span", { class: "qid" }, q.id),
+        el("span", { class: "qtext" }, q.star ? el("span", { class: "star", "aria-label": "starred" }, "★") : null, qText(q)),
+        stateBadge(q));
+      d.append(summary(), el("div", { class: "answer" }, el("div", { html: aHtml(q) }), markButtons(q, redraw)));
+      list.append(d);
+    });
+  }
+  function refreshMeter() { panel.querySelector(".meter").replaceWith(meter()); }
+  drawList();
+  return panel;
+}
+
+function buildDeck() {
+  const d = state.deck;
+  let items = DATA.questions.filter(q => matches(q, { section: d.section, starred: d.starred, status: "all", search: "" }));
+  if (d.order === "shuffle") {
+    items = items.slice();
+    for (let i = items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [items[i], items[j]] = [items[j], items[i]]; }
+  } else {
+    const rank = (q) => ({ review: 0, undefined: 1, known: 2 })[markOf(q.id) || "undefined"];
+    items = items.slice().sort((a, b) => rank(a) - rank(b));
+  }
+  d.queue = items.map(q => q.id); d.index = 0; d.shown = false;
+}
+
+function renderCards() {
+  const d = state.deck;
+  if (!d.queue.length) buildDeck();
+  const panel = el("section", { class: "panel", id: "panel-cards" });
+  panel.append(el("p", { class: "lede" }, t().cardLede));
+  const order = el("select", { id: "deck-order", "aria-label": t().deck },
+    el("option", { value: "due", selected: d.order === "due" }, t().dueFirst),
+    el("option", { value: "shuffle", selected: d.order === "shuffle" }, t().shuffle));
+  order.addEventListener("change", () => { d.order = order.value; buildDeck(); render(); });
+  const starred = el("button", { type: "button", class: "chip", "aria-pressed": String(d.starred), onclick: () => { d.starred = !d.starred; buildDeck(); render(); } }, t().starred);
+  panel.append(el("div", { class: "toolbar" }, order, starred));
+  panel.append(sectionChips(d, (id) => { d.section = id; buildDeck(); render(); }));
+  if (!d.queue.length) { panel.append(el("div", { class: "empty" }, t().deckEmpty)); return panel; }
+  const q = DATA.questions.find(x => x.id === d.queue[d.index % d.queue.length]);
+  const card = el("article", { class: "card", "aria-live": "polite" },
+    el("div", { class: "meta" }, el("span", {}, `${(d.index % d.queue.length) + 1} / ${d.queue.length}`), el("span", {}, `${q.id} · ${sectionName(q.section)}`),
+      q.star ? el("span", { class: "star" }, "★") : null, stateBadge(q)),
+    el("div", { class: "front" }, qText(q)));
+  if (d.shown) {
+    card.append(el("div", { class: "answer", html: aHtml(q) }));
+    card.append(el("div", { class: "actions" },
+      el("button", { type: "button", class: "btn good", onclick: () => grade("known") }, t().knowIt, " ", el("span", { class: "kbd" }, "K")),
+      el("button", { type: "button", class: "btn rev", onclick: () => grade("review") }, t().reviewAgain, " ", el("span", { class: "kbd" }, "R")),
+      el("button", { type: "button", class: "btn", onclick: nextCard }, t().next, " ", el("span", { class: "kbd" }, "→"))));
+  } else {
+    card.append(el("div", { class: "actions" },
+      el("button", { type: "button", class: "btn primary", id: "show-answer", onclick: () => { d.shown = true; render(); } }, t().showAnswer, " ", el("span", { class: "kbd" }, "Space")),
+      el("button", { type: "button", class: "btn", onclick: nextCard }, t().next, " ", el("span", { class: "kbd" }, "→"))));
+  }
+  panel.append(card, el("p", { class: "small" }, t().storage));
+  return panel;
+}
+
+function grade(value) {
+  const d = state.deck;
+  setMark(d.queue[d.index % d.queue.length], value);
+  nextCard();
+}
+function nextCard() { const d = state.deck; d.index = (d.index + 1) % Math.max(1, d.queue.length); d.shown = false; render(); }
+
+document.addEventListener("keydown", (e) => {
+  if (state.tab !== "cards" || e.target.closest("input, select, textarea")) return;
+  if (e.key === " ") { e.preventDefault(); state.deck.shown = true; render(); }
+  else if (e.key === "ArrowRight") nextCard();
+  else if ((e.key === "k" || e.key === "K") && state.deck.shown) grade("known");
+  else if ((e.key === "r" || e.key === "R") && state.deck.shown) grade("review");
+});
+
+function renderPlan() {
+  const panel = el("section", { class: "panel", id: "panel-plan" });
+  panel.append(el("p", { class: "lede" }, t().planLede));
+  const plan = el("div", { class: "plan" });
+  const order = [];
+  DATA.plan.forEach(w => { if (!order.includes(w.phase)) order.push(w.phase); });
+  order.forEach(phase => {
+    const weeks = el("div", { class: "weeks" });
+    DATA.plan.filter(w => w.phase === phase).forEach(w => {
+      const done = !!state.weeks[w.week];
+      const box = el("input", { type: "checkbox", id: "week-" + w.week, checked: done });
+      box.addEventListener("change", () => { state.weeks[w.week] = box.checked; store.set("weeks", state.weeks); row.classList.toggle("done", box.checked); });
+      const row = el("div", { class: "week" + (done ? " done" : "") },
+        el("div", { class: "wk" }, el("b", {}, w.week), el("span", {}, `${w.hours} ${t().hours}`),
+          el("label", { class: "done-toggle", for: "week-" + w.week }, box, t().done)),
+        el("div", {},
+          el("h4", {}, w.title[state.lang]),
+          el("p", { class: "goal" }, w.goal[state.lang]),
+          el("ol", {}, ...w.steps[state.lang].map(s => el("li", {}, s))),
+          el("div", { class: "out" }, el("span", {}, t().output), w.output[state.lang])));
+      weeks.append(row);
+    });
+    plan.append(el("div", { class: "phase" }, el("h3", {}, DATA.phases[phase][state.lang]), weeks));
+  });
+  panel.append(plan);
+  return panel;
+}
+
+function renderGlossary() {
+  const g = state.gloss;
+  const panel = el("section", { class: "panel", id: "panel-glossary" });
+  panel.append(el("p", { class: "lede" }, t().glossLede));
+  const search = el("input", { type: "search", id: "gloss-search", placeholder: t().glossSearch, value: g.search, "aria-label": t().glossSearch });
+  search.addEventListener("input", () => { g.search = search.value; drawRows(); });
+  const group = el("select", { id: "gloss-group", "aria-label": "Group" },
+    el("option", { value: "all" }, t().all),
+    ...DATA.groups.map(x => el("option", { value: x.en, selected: g.group === x.en }, x[state.lang])));
+  group.addEventListener("change", () => { g.group = group.value; drawRows(); });
+  panel.append(el("div", { class: "toolbar" }, search, group));
+  const tbody = el("tbody");
+  panel.append(el("div", { class: "table-wrap" }, el("table", {},
+    el("thead", {}, el("tr", {}, el("th", {}, t().term), el("th", {}, t().meaning), el("th", {}, t().repo))), tbody)));
+  function drawRows() {
+    tbody.replaceChildren();
+    const needle = g.search.toLowerCase();
+    DATA.glossary.filter(r => (g.group === "all" || r.group === g.group) &&
+      (!needle || (r.term + " " + r.term_zh + " " + plain(r.en) + " " + plain(r.zh)).toLowerCase().includes(needle)))
+      .forEach(r => tbody.append(el("tr", {},
+        el("td", { class: "term" }, r.term, r.term_zh ? el("small", {}, r.term_zh) : null),
+        el("td", { html: state.lang === "zh" ? r.zh : r.en }),
+        el("td", { class: "repo", html: r.repo }))));
+  }
+  drawRows();
+  return panel;
+}
+
+function renderProject() {
+  const p = DATA.project;
+  const panel = el("section", { class: "panel", id: "panel-project" });
+  panel.append(el("h2", {}, t().pitchTitle), el("div", { class: "pitch" }, ...p.pitch[state.lang].map(x => el("p", {}, x))));
+  panel.append(el("h2", {}, t().labsTitle));
+  panel.append(el("div", { class: "table-wrap" }, el("table", {},
+    el("thead", {}, el("tr", {}, el("th", {}, t().lab), el("th", {}, t().topic), el("th", {}, t().proof), el("th", {}, t().files))),
+    el("tbody", {}, ...p.labs.map(l => el("tr", {},
+      el("td", { class: "repo" }, l.lab), el("td", {}, l.title[state.lang]),
+      el("td", { class: "repo" }, l.proof), el("td", { class: "repo" }, l.files)))))));
+  panel.append(el("h2", {}, t().storiesTitle));
+  panel.append(el("ul", { class: "stories" }, ...p.stories.map(s => el("li", { class: "story" }, s[state.lang]))));
+  return panel;
+}
+
+const RENDER = { questions: renderQuestions, cards: renderCards, plan: renderPlan, glossary: renderGlossary, project: renderProject };
+
+function renderTabs() {
+  const nav = document.getElementById("tabs");
+  nav.replaceChildren(...TABS.map(id => el("button", {
+    type: "button", role: "tab", id: "tab-" + id, "aria-selected": String(state.tab === id), "aria-controls": "panel-" + id,
+    onclick: () => { state.tab = id; store.set("tab", id); history.replaceState(null, "", "#" + id); render(); window.scrollTo({ top: 0 }); }
+  }, t().tabs[id])));
+}
+
+function render() {
+  document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+  document.getElementById("subtitle").textContent = t().subtitle;
+  document.getElementById("lang-en").setAttribute("aria-pressed", String(state.lang === "en"));
+  document.getElementById("lang-zh").setAttribute("aria-pressed", String(state.lang === "zh"));
+  renderTabs();
+  main.replaceChildren(RENDER[state.tab]());
+}
+
+function setLang(lang) { state.lang = lang; store.set("lang", lang); render(); }
+document.getElementById("lang-en").addEventListener("click", () => setLang("en"));
+document.getElementById("lang-zh").addEventListener("click", () => setLang("zh"));
+render();
+</script>

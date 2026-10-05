@@ -1,6 +1,7 @@
 """Opt-in local bearer identities. Never trust identity headers or LLM roles."""
 import json
 import os
+from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 
@@ -31,6 +32,16 @@ def authenticate(header):
     if not identity:
         raise HTTPException(401, "A configured bearer token is required")
     return Principal(**identity)
+
+
+@contextmanager
+def acting_as(identity):
+    """Run a block under a stored identity, e.g. an agent resuming on behalf of its requester."""
+    token = principal.set(identity)
+    try:
+        yield identity
+    finally:
+        principal.reset(token)
 
 
 def require_role(*roles):

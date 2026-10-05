@@ -2,7 +2,8 @@ import json
 import logging
 import os
 import time
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -27,6 +28,7 @@ from app.repositories.platform import PlatformRepository
 from app.services.governance import GovernanceService
 from app.security import authenticate, enabled, principal, require_role
 from app.observability import current_trace, new_trace, traces
+from app.agent.memory import MemoryStore
 from app.agent.runtime import AgentRuntime
 
 
@@ -91,6 +93,7 @@ async def lifespan(application: FastAPI):
     vector_index = None
     chunk_index = None
     graph_service = None
+    optional = AsyncExitStack()  # Optional resources (agent checkpointer) closed on shutdown.
     try:
         await repository.connect()
         await cache.connect()
@@ -104,6 +107,7 @@ async def lifespan(application: FastAPI):
         service.governance = governance_service
         application.state.platform_store = store
         application.state.governance = governance_service
+        application.state.agent_memory = MemoryStore(store)
         await service.initialize()
         await cache.clear()
         application.state.knowledge_service = service
@@ -112,6 +116,7 @@ async def lifespan(application: FastAPI):
                 os.getenv("OLLAMA_URL", "http://localhost:11434"),
                 os.getenv("OLLAMA_EMBEDDING_MODEL", "embeddinggemma"),
                 os.getenv("OLLAMA_CHAT_MODEL", "llama3:latest"),
+                os.getenv("OLLAMA_TOOL_MODEL") or None,
             )
             vector_index = QdrantIndex(
                 os.getenv("QDRANT_URL", "http://localhost:6333"), models.embedding_model
@@ -138,6 +143,8 @@ async def lifespan(application: FastAPI):
             )
             application.state.rag_service.governance = governance_service
             application.state.agent = AgentRuntime(store, application.state.rag_service)
+            application.state.agent_graph = await build_graph_agent(
+                optional, store, application.state.rag_service, models, application.state.agent_memory)
             if enabled("GRAPH_ENABLED"):
                 from app.services.graph import GraphService
                 graph_service = GraphService(governance_service, application.state.rag_service)
@@ -150,6 +157,8 @@ async def lifespan(application: FastAPI):
         application.state.rag_service = None
         application.state.agent = None
         application.state.graph = None
+        application.state.agent_graph = None
+        await optional.aclose()
         if graph_service is not None:
             await graph_service.close()
         if models is not None:
@@ -162,6 +171,25 @@ async def lifespan(application: FastAPI):
         await search_index.close()
         await repository.close()
         logger.info("knowledge_api_stopped")
+
+
+async def build_graph_agent(stack, store, rag, models, memory):
+    """Lab 12 is optional: without the [agent] extras the rest of the API still runs."""
+    try:
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+        from app.agent.graph_runtime import GraphAgentService
+        from app.agent.knowledge_tools import DirectKnowledge, McpKnowledge
+    except ImportError:
+        logger.info("lab12_agent_disabled reason=missing_agent_extras")
+        return None
+    path = Path(os.getenv("AGENT_CHECKPOINT_DB", "var/agent_checkpoints.sqlite"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    checkpointer = await stack.enter_async_context(AsyncSqliteSaver.from_conn_string(str(path)))
+    if os.getenv("AGENT_KNOWLEDGE_TRANSPORT", "direct") == "mcp":
+        knowledge = McpKnowledge(os.getenv("AGENT_MCP_URL", "http://127.0.0.1:8002/mcp"))
+    else:
+        knowledge = DirectKnowledge(rag)
+    return GraphAgentService(store, knowledge, models, checkpointer, memory)
 
 
 app = FastAPI(
@@ -195,8 +223,14 @@ async def log_request(request: Request, call_next):
                 raise HTTPException(403, "Raw inspectors are disabled in security mode; use ACL-filtered document APIs")
             readonly_posts = {"/search", "/query", "/rag/query", "/rag/hybrid", "/rag/chunks/preview",
                               "/graph/query", "/graph/compare", "/governance/citations/validate",
-                              "/agent/runs", "/evaluation/run"}
-            if request.method not in {"GET", "HEAD", "OPTIONS"} and path not in readonly_posts:
+                              "/agent/runs", "/agent/v2/runs", "/evaluation/run",
+                              "/refinement/entities/resolve", "/refinement/duplicates",
+                              "/refinement/contradictions"}
+            # Owners may resume their own runs and delete their own memories; the
+            # services check ownership, so no editor/approver role is needed.
+            own_resource = (path.startswith("/agent/") and path.endswith("/resume")) or \
+                path.startswith("/agent/memories/")
+            if request.method not in {"GET", "HEAD", "OPTIONS"} and path not in readonly_posts and not own_resource:
                 require_role("admin", "editor", "approver")
                 if path.startswith(("/documents", "/rag/pdf", "/rag/documents", "/graph/documents")):
                     require_role("admin", "editor")

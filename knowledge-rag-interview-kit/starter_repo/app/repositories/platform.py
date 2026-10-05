@@ -35,6 +35,11 @@ class PlatformRepository:
         """, namespace, identifier, json.dumps(body, ensure_ascii=False))
         return await self.get(namespace, identifier)
 
+    async def delete(self, namespace, identifier):
+        status = await self.pool.execute(
+            "DELETE FROM platform_records WHERE namespace=$1 AND id=$2", namespace, identifier)
+        return status.endswith(" 1")
+
     async def list(self, namespace):
         rows = await self.pool.fetch(
             "SELECT body::text FROM platform_records WHERE namespace=$1 ORDER BY id",

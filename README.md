@@ -4,6 +4,8 @@
 
 ## 推荐打开顺序
 
+0. **零基础先读** `knowledge-rag-interview-kit/08_beginner_step_by_step.md`：16 周逐步学习计划（RAG/知识平台 + AI Agent 双岗位，英文）。
+   双语自测网页：`knowledge-rag-interview-kit/study_site/index.html`（中/英切换、闪卡、学习计划、术语表）。
 1. `knowledge-rag-interview-kit/README.md`：理解整体能力地图。
 2. `knowledge-rag-interview-kit/01_roadmap.md`：按 12 周安排学习。
 3. `knowledge-rag-interview-kit/06_agent_learning_guide.md`：Agent 零基础先读。
@@ -11,6 +13,7 @@
 5. `knowledge-rag-interview-kit/02_interview_bank.md`：使用 110 道题自测。
 6. `knowledge-rag-interview-kit/05_architecture_cheatsheet.md`：练习白板系统设计。
 7. `knowledge-rag-interview-kit/04_resource_index.md`：只在需要时打开外部资料。
+8. `knowledge-rag-interview-kit/07_agent_interview_prep_guide.md`：英文面试问答（含 Transformer、训练、LoRA、推理、Prompt Caching、推理模型、框架、协议、Benchmark、安全框架）。
 
 ## 电脑端工作区建议
 

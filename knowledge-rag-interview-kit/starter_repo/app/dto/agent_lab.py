@@ -61,6 +61,11 @@ class AgentStart(StrictModel):
     retries: int = Field(default=1, ge=0, le=1)
     # Optional deterministic prerequisites for tasks that must use evidence/tools.
     required_tools: list[Literal["search_knowledge", "calculate"]] = Field(default_factory=list, max_length=2)
+    # "structured": one JSON action per turn via output_schema (works with any model).
+    # "native_tools": the model API's own tool calling; may return several calls per turn.
+    mode: Literal["structured", "native_tools"] = "structured"
+    # A pending write is only approvable for this long; stale approvals are refused.
+    approval_ttl_seconds: int = Field(default=3600, ge=60, le=86400)
 
 
 class AgentApproval(StrictModel):

@@ -1,0 +1,652 @@
+{
+ "plan": [
+  {
+   "week": "0",
+   "phase": "setup",
+   "hours": "6–10",
+   "title": {
+    "en": "Setup and prerequisites",
+    "zh": "环境搭建与前置知识"
+   },
+   "goal": {
+    "en": "The project runs on your machine and you know the tools.",
+    "zh": "项目在你的电脑上跑起来，并熟悉所用工具。"
+   },
+   "steps": {
+    "en": [
+     "Learn just enough HTTP/REST, Docker, Git, SQL and Python venv/async.",
+     "pip install -e '.[dev,graph,agent]'; start Postgres, Redis, Elasticsearch, Qdrant.",
+     "Install Ollama; pull llama3 and embeddinggemma.",
+     "pytest -q passes; open /docs in the browser."
+    ],
+    "zh": [
+     "够用即可地学习 HTTP/REST、Docker、Git、SQL 和 Python venv/async。",
+     "pip install -e '.[dev,graph,agent]'；启动 Postgres、Redis、Elasticsearch、Qdrant。",
+     "安装 Ollama，拉取 llama3 和 embeddinggemma。",
+     "pytest -q 通过；在浏览器打开 /docs。"
+    ]
+   },
+   "output": {
+    "en": "A note listing the five services and what each one does.",
+    "zh": "一页笔记：五个服务分别做什么。"
+   }
+  },
+  {
+   "week": "1",
+   "phase": "platform",
+   "hours": "10",
+   "title": {
+    "en": "The Knowledge API (Lab 1)",
+    "zh": "知识 API（Lab 1）"
+   },
+   "goal": {
+    "en": "Understand how a request flows through a layered API.",
+    "zh": "理解请求如何流经分层 API。"
+   },
+   "steps": {
+    "en": [
+     "POST/GET/DELETE a document in Swagger.",
+     "Trace main.py → api/documents.py → services/knowledge.py → repositories/documents.py.",
+     "Break it: send an empty title; which layer rejects it?"
+    ],
+    "zh": [
+     "在 Swagger 中创建、查看、删除文档。",
+     "追踪 main.py → api/documents.py → services/knowledge.py → repositories/documents.py。",
+     "动手破坏：提交空标题，哪一层拒绝了它？"
+    ]
+   },
+   "output": {
+    "en": "A sequence diagram of POST /documents.",
+    "zh": "POST /documents 的时序图。"
+   }
+  },
+  {
+   "week": "2",
+   "phase": "platform",
+   "hours": "10",
+   "title": {
+    "en": "BM25 keyword search (Lab 2)",
+    "zh": "BM25 关键词检索（Lab 2）"
+   },
+   "goal": {
+    "en": "Understand lexical retrieval and its blind spots.",
+    "zh": "理解词法检索及其盲点。"
+   },
+   "steps": {
+    "en": [
+     "Seed data; GET /search?q=annual leave.",
+     "Compare 'C-101' with a paraphrase; read the ES mapping.",
+     "Break it: search a synonym the documents don't contain."
+    ],
+    "zh": [
+     "导入示例数据；GET /search?q=annual leave。",
+     "对比 “C-101” 与改写说法；阅读 ES mapping。",
+     "动手破坏：搜索文档中没有的同义词。"
+    ]
+   },
+   "output": {
+    "en": "A 5-query table: your first mini golden set.",
+    "zh": "5 个查询的结果表：你的第一个迷你 golden set。"
+   }
+  },
+  {
+   "week": "3",
+   "phase": "platform",
+   "hours": "12",
+   "title": {
+    "en": "Embeddings, chunking, vector RAG (Lab 3)",
+    "zh": "Embedding、分块与向量 RAG（Lab 3）"
+   },
+   "goal": {
+    "en": "Build intuition for embeddings and the basic RAG pipeline.",
+    "zh": "建立对 embedding 和基础 RAG 流水线的直觉。"
+   },
+   "steps": {
+    "en": [
+     "Follow labs/lab03_vector_rag.md: upload a PDF, preview chunks, index, POST /rag/query.",
+     "Read chunking.py and services/rag.py.",
+     "Break it: chunk_size 100 vs 3000 on the same question."
+    ],
+    "zh": [
+     "按 labs/lab03_vector_rag.md：上传 PDF、预览分块、建索引、POST /rag/query。",
+     "阅读 chunking.py 和 services/rag.py。",
+     "动手破坏：同一问题分别用 chunk_size 100 和 3000。"
+    ]
+   },
+   "output": {
+    "en": "A chunk-size comparison with a conclusion.",
+    "zh": "分块大小对比及结论。"
+   }
+  },
+  {
+   "week": "4",
+   "phase": "platform",
+   "hours": "12",
+   "title": {
+    "en": "Hybrid, RRF, rerank, evaluation (Lab 4)",
+    "zh": "混合检索、RRF、重排序、评估（Lab 4）"
+   },
+   "goal": {
+    "en": "The core of every production RAG system.",
+    "zh": "所有生产级 RAG 的核心。"
+   },
+   "steps": {
+    "en": [
+     "POST /rag/hybrid with bm25 / vector / hybrid, rerank on and off.",
+     "Run eval/run_eval.py for all modes.",
+     "Hand-compute RRF; stop Qdrant and watch the graceful fallback."
+    ],
+    "zh": [
+     "POST /rag/hybrid 分别用 bm25 / vector / hybrid，并开关 rerank。",
+     "对所有模式运行 eval/run_eval.py。",
+     "手算 RRF；停掉 Qdrant，观察优雅降级。"
+    ]
+   },
+   "output": {
+    "en": "A metrics table and a recorded answer to 'Why hybrid?'",
+    "zh": "指标表，以及“为什么要混合检索”的录音回答。"
+   }
+  },
+  {
+   "week": "5",
+   "phase": "knowledge",
+   "hours": "8",
+   "title": {
+    "en": "Ontology and knowledge modelling (Lab 5)",
+    "zh": "本体与知识建模（Lab 5）"
+   },
+   "goal": {
+    "en": "Turn a pile of text into a model of the business.",
+    "zh": "把一堆文本变成业务模型。"
+   },
+   "steps": {
+    "en": [
+     "Read dto/graph.py's minimal ontology.",
+     "Write 5 competency questions and check the ontology answers them.",
+     "Add one entity type and one relation, with a justification."
+    ],
+    "zh": [
+     "阅读 dto/graph.py 中的最小本体。",
+     "写 5 个能力问题（competency questions），检查本体能否回答。",
+     "增加一个实体类型和一个关系，并说明理由。"
+    ]
+   },
+   "output": {
+    "en": "Your extended ontology diagram.",
+    "zh": "扩展后的本体图。"
+   }
+  },
+  {
+   "week": "6",
+   "phase": "knowledge",
+   "hours": "10",
+   "title": {
+    "en": "Knowledge graph and GraphRAG (Lab 6)",
+    "zh": "知识图谱与 GraphRAG（Lab 6）"
+   },
+   "goal": {
+    "en": "Multi-hop questions with explainable paths.",
+    "zh": "带可解释路径的多跳问题。"
+   },
+   "steps": {
+    "en": [
+     "Start Neo4j; extract, review and write a graph.",
+     "Compare vector vs graph on a two-hop question.",
+     "Break it: a three-hop question. What does traversal need?"
+    ],
+    "zh": [
+     "启动 Neo4j；抽取、审阅并写入图。",
+     "在两跳问题上比较向量与图。",
+     "动手破坏：三跳问题，遍历需要什么限制？"
+    ]
+   },
+   "output": {
+    "en": "A two-hop example with its evidence path.",
+    "zh": "一个带证据路径的两跳示例。"
+   }
+  },
+  {
+   "week": "7",
+   "phase": "knowledge",
+   "hours": "8",
+   "title": {
+    "en": "Entity resolution, duplicates, contradictions (Lab 7)",
+    "zh": "实体消歧、近重复、矛盾检测（Lab 7）"
+   },
+   "goal": {
+    "en": "Refine knowledge without wrong merges.",
+    "zh": "在不误合并的前提下提炼知识。"
+   },
+   "steps": {
+    "en": [
+     "Follow labs/lab07_entity_resolution.md in Swagger.",
+     "Read refinement/entity_resolution.py and its tests.",
+     "Break it: lower MERGE_THRESHOLD to 0.8 and find the wrong merge."
+    ],
+    "zh": [
+     "按 labs/lab07_entity_resolution.md 在 Swagger 中练习。",
+     "阅读 refinement/entity_resolution.py 及其测试。",
+     "动手破坏：把 MERGE_THRESHOLD 调到 0.8，找出错误合并。"
+    ]
+   },
+   "output": {
+    "en": "Answer: design entity resolution for 10M company records.",
+    "zh": "回答：为 1000 万条公司记录设计实体消歧。"
+   }
+  },
+  {
+   "week": "8",
+   "phase": "trust",
+   "hours": "8",
+   "title": {
+    "en": "Governance, provenance, lifecycle (Lab 8)",
+    "zh": "治理、溯源与生命周期（Lab 8）"
+   },
+   "goal": {
+    "en": "Only approved, current knowledge is retrievable, with a full audit trail.",
+    "zh": "只有已批准、有效的知识可被检索，并有完整审计轨迹。"
+   },
+   "steps": {
+    "en": [
+     "Move a document draft → validated → approved → published → deprecated.",
+     "Roll back a version.",
+     "GOVERNANCE_ENABLED=true: confirm unpublished documents are never retrieved."
+    ],
+    "zh": [
+     "把文档从 draft → validated → approved → published → deprecated。",
+     "回滚一个版本。",
+     "GOVERNANCE_ENABLED=true：确认未发布的文档不会被检索到。"
+    ]
+   },
+   "output": {
+    "en": "A lifecycle diagram with who may do each transition.",
+    "zh": "生命周期图，标出每个转换由谁执行。"
+   }
+  },
+  {
+   "week": "9",
+   "phase": "trust",
+   "hours": "12",
+   "title": {
+    "en": "Evaluation, observability, security (Labs 9–10)",
+    "zh": "评估、可观测性、安全（Lab 9–10）"
+   },
+   "goal": {
+    "en": "Measure quality, see what happened, and prove access control.",
+    "zh": "衡量质量、看清发生了什么、证明访问控制有效。"
+   },
+   "steps": {
+    "en": [
+     "Generation evaluation with a baseline.",
+     "Check /observability/summary.",
+     "SECURITY_ENABLED with two identities: a low-clearance user can't retrieve restricted docs via RAG or the agent."
+    ],
+    "zh": [
+     "带基线的生成评估。",
+     "查看 /observability/summary。",
+     "开启 SECURITY_ENABLED 并使用两个身份：低权限用户无论通过 RAG 还是 Agent 都取不到受限文档。"
+    ]
+   },
+   "output": {
+    "en": "A 'quality dropped' incident runbook.",
+    "zh": "“质量下降”事故处理手册。"
+   }
+  },
+  {
+   "week": "10",
+   "phase": "agent",
+   "hours": "12",
+   "title": {
+    "en": "The agent loop from scratch (Lab 11)",
+    "zh": "从零实现 Agent 循环（Lab 11）"
+   },
+   "goal": {
+    "en": "Know exactly what an agent is before using a framework.",
+    "zh": "在使用框架前，彻底理解 Agent 是什么。"
+   },
+   "steps": {
+    "en": [
+     "Follow lab11_agent_foundations.md steps 1–9.",
+     "Read runtime.py and tests/test_agent_runtime.py.",
+     "Run the combined task 5× without required_tools and count wrong answers."
+    ],
+    "zh": [
+     "按 lab11_agent_foundations.md 完成步骤 1–9。",
+     "阅读 runtime.py 和 tests/test_agent_runtime.py。",
+     "不加 required_tools 运行组合任务 5 次，统计错误答案。"
+    ]
+   },
+   "output": {
+    "en": "Draw the loop from memory; answer 'What is an agent?'",
+    "zh": "凭记忆画出循环；回答“什么是 Agent？”"
+   }
+  },
+  {
+   "week": "11",
+   "phase": "agent",
+   "hours": "10",
+   "title": {
+    "en": "Tools, memory, context, reliability",
+    "zh": "工具、记忆、上下文与可靠性"
+   },
+   "goal": {
+    "en": "Function calling, context engineering, expiry and crash recovery.",
+    "zh": "函数调用、上下文工程、审批过期与崩溃恢复。"
+   },
+   "steps": {
+    "en": [
+     "Read memory.py and its tests.",
+     "Optional: pull a tool-capable model and try mode=native_tools.",
+     "Kill the API mid-run, restart, POST /agent/runs/{id}/resume."
+    ],
+    "zh": [
+     "阅读 memory.py 及其测试。",
+     "可选：拉取支持工具调用的模型，尝试 mode=native_tools。",
+     "在运行中杀掉 API，重启后 POST /agent/runs/{id}/resume。"
+    ]
+   },
+   "output": {
+    "en": "The crash-point table in your own words.",
+    "zh": "用自己的话写出“崩溃点”表格。"
+   }
+  },
+  {
+   "week": "12",
+   "phase": "agent",
+   "hours": "14",
+   "title": {
+    "en": "Durable agent, MCP, evaluation (Lab 12)",
+    "zh": "持久化 Agent、MCP 与评估（Lab 12）"
+   },
+   "goal": {
+    "en": "Survive failures, pass an audit, and measure reliability.",
+    "zh": "能扛住故障、通过审计、衡量可靠性。"
+   },
+   "steps": {
+    "en": [
+     "Run the v2 flow with approval in Swagger.",
+     "python scripts/lab12_crash_demo.py → PASS.",
+     "Run the MCP server and connect a client.",
+     "Run eval/run_agent_suite.py with 3 trials."
+    ],
+    "zh": [
+     "在 Swagger 中跑一遍带审批的 v2 流程。",
+     "python scripts/lab12_crash_demo.py → PASS。",
+     "运行 MCP server 并连接一个客户端。",
+     "用 3 次重复运行 eval/run_agent_suite.py。"
+    ]
+   },
+   "output": {
+    "en": "Suite report + ADR: single vs multi-agent.",
+    "zh": "评估报告 + ADR：单 Agent vs 多 Agent。"
+   }
+  },
+  {
+   "week": "13",
+   "phase": "models",
+   "hours": "10",
+   "title": {
+    "en": "LLM fundamentals and ecosystem",
+    "zh": "LLM 基础与生态"
+   },
+   "goal": {
+    "en": "Transformers, training, LoRA, inference, caching, reasoning models, frameworks, protocols, benchmarks, security frameworks.",
+    "zh": "Transformer、训练、LoRA、推理、缓存、推理模型、框架、协议、Benchmark、安全框架。"
+   },
+   "steps": {
+    "en": [
+     "One topic per day (see 08 guide Week 13 table).",
+     "Answer every 'Models & ecosystem' card out loud.",
+     "Re-study any answer over 2 minutes."
+    ],
+    "zh": [
+     "每天一个主题（见 08 指南第 13 周表格）。",
+     "把“模型与生态”卡片逐一口头作答。",
+     "超过 2 分钟的回答重新学习。"
+    ]
+   },
+   "output": {
+    "en": "All section L cards marked 'Know it'.",
+    "zh": "L 部分所有卡片标记为“已掌握”。"
+   }
+  },
+  {
+   "week": "14",
+   "phase": "interview",
+   "hours": "10",
+   "title": {
+    "en": "Your story and system design",
+    "zh": "项目故事与系统设计"
+   },
+   "goal": {
+    "en": "Tell the project in 2 minutes; design under time pressure.",
+    "zh": "2 分钟讲清项目；在时间压力下做设计。"
+   },
+   "steps": {
+    "en": [
+     "Record the 2-minute and 5-minute pitch.",
+     "Two 40-minute designs: knowledge assistant, refund agent.",
+     "5 failure modes per design and how to detect them."
+    ],
+    "zh": [
+     "录制 2 分钟和 5 分钟版本的项目介绍。",
+     "两个 40 分钟设计：知识助手、退款 Agent。",
+     "每个设计列出 5 个失败模式及检测方法。"
+    ]
+   },
+   "output": {
+    "en": "Two design sketches with trade-offs.",
+    "zh": "两份带取舍说明的设计草图。"
+   }
+  },
+  {
+   "week": "15",
+   "phase": "interview",
+   "hours": "10",
+   "title": {
+    "en": "Mock interviews",
+    "zh": "模拟面试"
+   },
+   "goal": {
+    "en": "Perform under realistic conditions.",
+    "zh": "在接近真实的条件下发挥。"
+   },
+   "steps": {
+    "en": [
+     "3 mocks: 15 min project, 25 min design, 20 min rapid-fire (Shuffle + starred).",
+     "Live-code the agent loop, RRF, metrics, retry.",
+     "Redo the three weakest answers next day."
+    ],
+    "zh": [
+     "3 次模拟：15 分钟项目、25 分钟设计、20 分钟快问快答（随机 + 仅星标）。",
+     "现场手写 Agent 循环、RRF、指标、重试。",
+     "第二天重做最弱的三个回答。"
+    ]
+   },
+   "output": {
+    "en": "A list of weak spots, each fixed.",
+    "zh": "弱项清单，并逐一补强。"
+   }
+  },
+  {
+   "week": "16",
+   "phase": "interview",
+   "hours": "6–8",
+   "title": {
+    "en": "Polish",
+    "zh": "收尾打磨"
+   },
+   "goal": {
+    "en": "Everything works for a live demo; you're rested.",
+    "zh": "现场演示一切正常；保持状态。"
+   },
+   "steps": {
+    "en": [
+     "Re-run all tests and demos.",
+     "Glossary pass: every term under 20 seconds.",
+     "Prepare questions for the interviewer; rest the day before."
+    ],
+    "zh": [
+     "重新运行所有测试和演示。",
+     "过一遍术语表：每个术语 20 秒内讲清。",
+     "准备向面试官提的问题；面试前一天休息。"
+    ]
+   },
+   "output": {
+    "en": "Ready.",
+    "zh": "准备就绪。"
+   }
+  }
+ ],
+ "phases": {
+  "setup": {
+   "en": "Setup",
+   "zh": "准备"
+  },
+  "platform": {
+   "en": "RAG platform",
+   "zh": "RAG 平台"
+  },
+  "knowledge": {
+   "en": "Knowledge engineering",
+   "zh": "知识工程"
+  },
+  "trust": {
+   "en": "Trust & quality",
+   "zh": "可信与质量"
+  },
+  "agent": {
+   "en": "Agents",
+   "zh": "Agent"
+  },
+  "models": {
+   "en": "Models & ecosystem",
+   "zh": "模型与生态"
+  },
+  "interview": {
+   "en": "Interview",
+   "zh": "面试"
+  }
+ },
+ "project": {
+  "pitch": {
+   "en": [
+    "I built a learning-scale enterprise knowledge and agent platform in Python and FastAPI. Documents are parsed, chunked and indexed twice: in Elasticsearch for BM25 and in Qdrant for embeddings. Queries go through optional query rewriting, parallel keyword and vector retrieval, Reciprocal Rank Fusion and a local LLM reranker, and answers carry numbered citations with document version and source. Around that there's a governance lifecycle, ACL enforced at retrieval time, a Neo4j GraphRAG path, entity resolution, and an evaluation service that scores retrieval and generation separately.",
+    "On top, I built the agent twice, on purpose: first framework-free, with schema-validated actions, budgets, human approval and idempotent writes; then as a LangGraph state graph with one model-driven planning node, deterministic verification, a checkpointed approval pause and an execution ledger. I kill the process right after the write, resume, and prove from the ledger that nothing was duplicated. Knowledge search is also a read-only MCP server. I evaluate the agent with 21 golden and adversarial tasks over repeated trials, reporting pass@1, pass^k and an unapproved-writes invariant that must stay at zero."
+   ],
+   "zh": [
+    "我用 Python 和 FastAPI 做了一个学习规模的企业知识与 Agent 平台。文档经过解析、分块，并被索引两次：Elasticsearch 做 BM25，Qdrant 存 embedding。查询经过可选的查询改写、并行的关键词和向量检索、倒数排名融合（RRF）以及本地 LLM 重排序，答案附带编号引用，包含文档版本和来源。外围有治理生命周期、在检索时执行的 ACL、Neo4j GraphRAG、实体消歧，以及分别评估检索和生成的评估服务。",
+    "在此之上，我有意把 Agent 做了两遍：第一遍不用框架，包含 schema 校验的动作、预算、人工审批和幂等写入；第二遍用 LangGraph 状态图，只有一个由模型驱动的规划节点，加上确定性校验、带 checkpoint 的审批暂停和执行账本。我在写入后立即杀掉进程，再恢复，用账本证明没有重复写入。知识检索也作为只读 MCP server 暴露。我用 21 个 golden 和对抗性任务、多次重复来评估 Agent，报告 pass@1、pass^k 以及必须保持为 0 的“未审批写入”指标。"
+   ]
+  },
+  "labs": [
+   {
+    "lab": "1–2",
+    "title": {
+     "en": "Knowledge API + BM25",
+     "zh": "知识 API + BM25"
+    },
+    "proof": "pytest -q · GET /search",
+    "files": "api/ · services/knowledge.py · retrieval/elasticsearch_index.py"
+   },
+   {
+    "lab": "3",
+    "title": {
+     "en": "Vector RAG with citations",
+     "zh": "带引用的向量 RAG"
+    },
+    "proof": "POST /rag/query",
+    "files": "ingestion/chunking.py · services/rag.py"
+   },
+   {
+    "lab": "4",
+    "title": {
+     "en": "Hybrid + RRF + rerank + metrics",
+     "zh": "混合检索 + RRF + 重排序 + 指标"
+    },
+    "proof": "eval/run_eval.py",
+    "files": "retrieval/fusion.py · services/hybrid.py · evaluation/metrics.py"
+   },
+   {
+    "lab": "5–6",
+    "title": {
+     "en": "Ontology + GraphRAG",
+     "zh": "本体 + GraphRAG"
+    },
+    "proof": "POST /graph/compare",
+    "files": "dto/graph.py · services/graph.py"
+   },
+   {
+    "lab": "7",
+    "title": {
+     "en": "Entity resolution, duplicates, contradictions",
+     "zh": "实体消歧、近重复、矛盾检测"
+    },
+    "proof": "POST /refinement/entities/resolve",
+    "files": "refinement/entity_resolution.py"
+   },
+   {
+    "lab": "8",
+    "title": {
+     "en": "Governance, provenance, rollback",
+     "zh": "治理、溯源、回滚"
+    },
+    "proof": "POST /governance/documents/{id}/transition",
+    "files": "services/governance.py"
+   },
+   {
+    "lab": "9–10",
+    "title": {
+     "en": "Evaluation, observability, security",
+     "zh": "评估、可观测性、安全"
+    },
+    "proof": "POST /evaluation/run · /observability/summary",
+    "files": "services/evaluation.py · observability.py · security.py"
+   },
+   {
+    "lab": "11",
+    "title": {
+     "en": "Framework-free agent + upgrades",
+     "zh": "无框架 Agent + 升级"
+    },
+    "proof": "POST /agent/runs · eval/run_agent.py",
+    "files": "agent/runtime.py · agent/memory.py"
+   },
+   {
+    "lab": "12",
+    "title": {
+     "en": "Durable LangGraph agent + MCP + eval suite",
+     "zh": "持久化 LangGraph Agent + MCP + 评估套件"
+    },
+    "proof": "scripts/lab12_crash_demo.py → PASS · eval/run_agent_suite.py",
+    "files": "agent/graph_runtime.py · mcp_server.py · evaluation/agent_metrics.py"
+   }
+  ],
+  "stories": [
+   {
+    "en": "The model guessed instead of calculating. → required_tools narrows the schema to the next required tool. Enforce critical steps in code.",
+    "zh": "模型没算就猜了答案。→ required_tools 把 schema 收窄为下一个必需工具。关键步骤要用代码强制。"
+   },
+   {
+    "en": "Retrieval was perfect (Recall@3 = 1.0) but citation accuracy was 0.5. → Evaluate retrieval and generation separately.",
+    "zh": "检索完美（Recall@3 = 1.0），但引用准确率只有 0.5。→ 检索和生成要分开评估。"
+   },
+   {
+    "en": "Double approval. → Idempotency key + ON CONFLICT DO NOTHING turns the second approval into a read.",
+    "zh": "重复审批。→ 幂等键 + ON CONFLICT DO NOTHING 让第二次审批变成只读。"
+   },
+   {
+    "en": "The schema that broke the model server: Ollama couldn't compile maxLength 2000 plus nested nullable objects into a grammar. → Bisected, flattened, made every field required, added a regression test.",
+    "zh": "让模型服务报错的 schema：Ollama 无法把 maxLength 2000 和嵌套可空对象编译成语法。→ 二分排查、扁平化、所有字段设为必填，并加回归测试。"
+   },
+   {
+    "en": "My own prompt refactor broke the agent: 'return tool=finish' became 'finish', and llama3 looped on calculate. Unit tests passed; the live eval suite caught it. → Restored the wording, 15/15 on re-run, pinned in a test. Prompts are code.",
+    "zh": "我自己的 prompt 重构把 Agent 弄坏了：“return tool=finish”被改成“finish”，llama3 就一直循环调用 calculate。单元测试全过，是线上评估套件发现的。→ 恢复原措辞，重跑 15/15 通过，并用测试锁定。Prompt 就是代码。"
+   },
+   {
+    "en": "Crash after the write. → LangGraph re-runs the unfinished node; the ledger check returns the existing receipt instead of writing again.",
+    "zh": "写入后崩溃。→ LangGraph 会重跑未完成的节点；账本检查返回已有回执，而不是再写一次。"
+   }
+  ]
+ }
+}

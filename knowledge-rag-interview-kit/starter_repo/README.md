@@ -6,6 +6,10 @@
 
 - [Lab 4 完整学习指南](labs/lab04_hybrid_retrieval.md)：原理、调用链、RRF 手算、API 实验与评估。
 - [Labs 6/8/9/10/11 动手指南](labs/labs06_08_09_10_11.md)：GraphRAG、治理、生成评估、安全观测、带审批的本地 Agent。
+- [Lab 7：实体消歧、近重复、矛盾检测](labs/lab07_entity_resolution.md)（`/refinement/*`）。
+- [Lab 11：Agent 基础 + 升级](labs/lab11_agent_foundations.md)：native tool calling、上下文压缩、审批过期、崩溃恢复。
+- [Lab 12：持久化 Agent](labs/lab12_agent_reliability.md)：LangGraph 状态图、checkpoint、审批暂停、执行账本、MCP 服务器、21 个任务的评估套件（pass@k / pass^k）。
+  需要 `pip install -e '.[agent]'`；验收：`python scripts/lab12_crash_demo.py` 输出 PASS。
 
 以上编号按 hands-on labs（与后半段 roadmap 的 week 编号不同）。新 API 可在 `/docs` 操作；
 GraphRAG 可选开启，无需云 API key。安全/严格治理默认关闭，保持已有本地学习流程兼容。
