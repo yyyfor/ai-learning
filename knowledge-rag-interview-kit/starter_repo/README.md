@@ -4,6 +4,12 @@
 
 ## 新人从这里开始
 
+- [当前实践与学习地图（2026-10-25）](../09_current_practice.md)：覆盖整个实现与最新复核资料，并说明哪些仍是后续扩展。
+- [Lab 13：本地录音、转写、摘要](labs/lab13_local_voice.md)：主页面 **Voice notes**，Whisper + Ollama，无需云 API key。
+  安装 `.venv/bin/python -m pip install -e '.[voice]'`，运行 `.venv/bin/python scripts/setup_voice.py` 下载语音模型；摘要模型 `ollama pull qwen2.5:3b`。
+- 导入 9 篇有来源和复核日期的学习笔记：`.venv/bin/python scripts/import_reference_notes.py`。
+  通过已有 API 创建文档并索引，重复运行复用同一快照；source 为 `reference-notes`。
+
 - [Lab 4 完整学习指南](labs/lab04_hybrid_retrieval.md)：原理、调用链、RRF 手算、API 实验与评估。
 - [Labs 6/8/9/10/11 动手指南](labs/labs06_08_09_10_11.md)：GraphRAG、治理、生成评估、安全观测、带审批的本地 Agent。
 - [Lab 7：实体消歧、近重复、矛盾检测](labs/lab07_entity_resolution.md)（`/refinement/*`）。
@@ -11,7 +17,9 @@
 - [Lab 12：持久化 Agent](labs/lab12_agent_reliability.md)：LangGraph 状态图、checkpoint、审批暂停、执行账本、MCP 服务器、21 个任务的评估套件（pass@k / pass^k）。
   需要 `pip install -e '.[agent]'`；验收：`python scripts/lab12_crash_demo.py` 输出 PASS。
 
-以上编号按 hands-on labs（与后半段 roadmap 的 week 编号不同）。新 API 可在 `/docs` 操作；
+以上编号按 hands-on labs（与后半段 roadmap 的 week 编号不同）。主页面侧栏的 **Learning labs**
+已提供 GraphRAG、Governance、Evaluation、Observability、Agent playground 和 Durable agent 的交互表单，
+分别对应 Lab 6、8、9、10、11、12；也可在 `/docs` 操作同一组 API。
 GraphRAG 可选开启，无需云 API key。安全/严格治理默认关闭，保持已有本地学习流程兼容。
 
 先读 [New Joiner Guide](NEW_JOINER_GUIDE.md)：从启动项目、阅读真实目录结构，

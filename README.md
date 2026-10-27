@@ -4,6 +4,11 @@
 
 ## 推荐打开顺序
 
+新增：[当前实践与学习地图（2026-10-25）](knowledge-rag-interview-kit/09_current_practice.md)，
+覆盖已有 RAG/GraphRAG/Agent 的实际实现、9 篇可导入参考笔记，以及
+[Lab 13 本地录音与摘要](knowledge-rag-interview-kit/starter_repo/labs/lab13_local_voice.md)。
+运行中的页面入口：[Voice notes](http://127.0.0.1:8000/#voice)。
+
 0. **零基础先读** `knowledge-rag-interview-kit/08_beginner_step_by_step.md`：16 周逐步学习计划（RAG/知识平台 + AI Agent 双岗位，英文）。
    双语自测网页：`knowledge-rag-interview-kit/study_site/index.html`（中/英切换、闪卡、学习计划、术语表）。
 1. `knowledge-rag-interview-kit/README.md`：理解整体能力地图。

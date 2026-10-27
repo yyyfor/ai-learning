@@ -30,6 +30,7 @@ from app.security import authenticate, enabled, principal, require_role
 from app.observability import current_trace, new_trace, traces
 from app.agent.memory import MemoryStore
 from app.agent.runtime import AgentRuntime
+from app.services.voice import VoiceService
 
 
 class JsonFormatter(logging.Formatter):
@@ -94,6 +95,8 @@ async def lifespan(application: FastAPI):
     chunk_index = None
     graph_service = None
     optional = AsyncExitStack()  # Optional resources (agent checkpointer) closed on shutdown.
+    voice = VoiceService()
+    application.state.voice = voice
     try:
         await repository.connect()
         await cache.connect()
@@ -159,6 +162,7 @@ async def lifespan(application: FastAPI):
         application.state.graph = None
         application.state.agent_graph = None
         await optional.aclose()
+        await voice.close()
         if graph_service is not None:
             await graph_service.close()
         if models is not None:
@@ -226,6 +230,7 @@ async def log_request(request: Request, call_next):
                               "/agent/runs", "/agent/v2/runs", "/evaluation/run",
                               "/refinement/entities/resolve", "/refinement/duplicates",
                               "/refinement/contradictions"}
+            readonly_posts.update({"/voice/transcribe", "/voice/summary"})
             # Owners may resume their own runs and delete their own memories; the
             # services check ownership, so no editor/approver role is needed.
             own_resource = (path.startswith("/agent/") and path.endswith("/resume")) or \

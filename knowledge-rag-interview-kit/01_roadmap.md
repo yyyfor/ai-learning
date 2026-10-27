@@ -1,5 +1,9 @@
 # 12 周 Roadmap
 
+当前代码与新增扩展请配合 [2026-10-25 学习地图](09_current_practice.md) 阅读。
+完成原有路线后可做 [Lab 13 本地录音、转写与摘要](starter_repo/labs/lab13_local_voice.md)，
+把自己的语音笔记接入治理和 RAG。Week 与 Lab 编号并非一一对应。
+
 ## Week 1 — Python Backend & Platform API
 
 目标：补齐工程底座，不把时间浪费在纯语法。

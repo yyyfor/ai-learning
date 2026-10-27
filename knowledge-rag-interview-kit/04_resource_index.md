@@ -87,3 +87,21 @@
 12. OpenAI Agents SDK 或 LangGraph（二选一做深）
 13. State/checkpoint/HITL/guardrails/evals
 14. MCP server/client 小实验
+
+## 2026-10-25 复核补充
+
+以下为本轮实际复核并用于学习笔记的官方来源。完整实现对照见
+[当前实践与项目学习地图](09_current_practice.md)，可导入笔记位于 `starter_repo/knowledge/reference_notes.json`。
+
+- [LangChain Context engineering](https://docs.langchain.com/oss/python/langchain/context-engineering)
+- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
+- [MCP 2026-07-28 Architecture](https://modelcontextprotocol.io/docs/2026-07-28/learn/architecture)
+- [Qdrant Hybrid Queries 当前入口](https://qdrant.tech/documentation/search/hybrid-queries/)
+- [Ollama Structured Outputs](https://docs.ollama.com/capabilities/structured-outputs)
+- [faster-whisper](https://github.com/SYSTRAN/faster-whisper)
+- [MDN AudioWorklet](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet)
+- [MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)
+- [Ragas Faithfulness](https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/faithfulness/)
+- [OpenTelemetry GenAI 规范迁移说明](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
+
+上面的资料索引保留原学习路线；未标注本次复核的链接不代表全部重新验证。

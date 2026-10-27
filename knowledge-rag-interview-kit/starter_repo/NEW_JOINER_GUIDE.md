@@ -1,8 +1,7 @@
 # New Joiner Guide
 
-Week 3 update: the optional local RAG pipeline now lives in `app/api/rag.py`,
-`app/services/rag.py`, `app/ingestion/`, and the Ollama/Qdrant adapters.
-See [the Week 3 walkthrough](labs/lab03_vector_rag.md) for setup and examples.
+Updated 2026-10-25. Start with the [current learning map](../09_current_practice.md)
+for the whole system, or [Lab 13](labs/lab13_local_voice.md) for local voice notes.
 The original `/query` remains retrieval-only; `/rag/query` generates answers.
 
 This is a learning project: a small Knowledge Platform with a browser workspace.
@@ -19,15 +18,19 @@ Optional Elasticsearch `semantic_text` search is also implemented behind a switc
 
 `POST /query` does **not** call an LLM or generate an answer. It returns retrieved
 documents, their scores, a combined `context` string, and `citations`.
-The optional Week 3 pipeline adds PDF parsing, chunking, local embeddings,
-vector retrieval, and LLM answers at `/rag/query`. There is no RRF fusion,
-reranker, GraphRAG, document ACL, or durable agent runtime yet.
+The optional RAG pipeline adds PDF parsing, chunking, local embeddings, hybrid
+BM25/vector retrieval with RRF, reranking, and LLM answers at `/rag/query`.
+GraphRAG, entity refinement, governance, evaluation, optional authentication/ACL,
+bounded agents and durable LangGraph execution are implemented. The main UI has
+forms for Labs 6/8/9/10/11/12; refinement also has APIs in `/docs`.
+Voice notes add local Whisper transcription and Ollama summaries, with explicit
+save-to-document and index-for-RAG actions. See each lab for its dependencies and limits.
 
 The [parent roadmap](../01_roadmap.md) and [hands-on labs](../03_hands_on_labs.md)
 describe future learning goals as well as the starting backend/search work.
 The proposed directory tree in [README](README.md) is a destination, not the
-current filesystem. Agent contracts and approval helpers are scaffolding;
-installable graph/agent extras and a Neo4j Compose service do not implement those labs.
+current filesystem. Use `app/agent/runtime.py` and `graph_runtime.py` to study
+the implemented agent loops. Optional packages and services must still be installed/enabled.
 
 ## 2. First run
 
@@ -87,11 +90,14 @@ the Python Elasticsearch client requires `>=9.5,<10`.
 | [app/static/index.html](app/static/index.html) | Workspace panels and forms. |
 | [app/static/app.js](app/static/app.js) | Same-origin API calls, rendering, pagination, form handling. |
 | [app/static/style.css](app/static/style.css) | Workspace appearance and responsive layout. |
-| [docker-compose.yml](docker-compose.yml) | Core services plus optional Kibana and later-use Neo4j. |
+| [docker-compose.yml](docker-compose.yml) | Core services plus optional Kibana, Qdrant and Neo4j. |
 | [pyproject.toml](pyproject.toml) | Python requirement, editable package, core and optional dependencies. |
 | [app/dto/agent.py](app/dto/agent.py), [policy.py](app/agent/policy.py) | Typed agent state/tool requests and small approval helpers. |
-| [tests/test_agent_policy.py](tests/test_agent_policy.py) | Two agent-policy scaffold tests, not broad Week 1–2 API coverage. |
-| [Lab 11](labs/lab11_agent_foundations.md), [Lab 12](labs/lab12_agent_reliability.md) | Future agent exercises and completion criteria. |
+| [app/agent/runtime.py](app/agent/runtime.py), [graph_runtime.py](app/agent/graph_runtime.py) | Bounded agent loop and durable graph, approval and recovery. |
+| [app/static/labs.js](app/static/labs.js) | Main-page interactions for Labs 6/8/9/10/11/12. |
+| [app/services/voice.py](app/services/voice.py), [voice.js](app/static/voice.js) | Local audio transcription, summaries and the microphone UI. |
+| [Lab 11](labs/lab11_agent_foundations.md), [Lab 12](labs/lab12_agent_reliability.md), [Lab 13](labs/lab13_local_voice.md) | Implemented workflows, exercises and explicit limitations. |
+| [knowledge/reference_notes.json](knowledge/reference_notes.json) | Reviewed, sourced learning notes; import using `scripts/import_reference_notes.py`. |
 
 ## 4. Follow the complete workflow
 
@@ -214,7 +220,8 @@ TTL controls how long cached results survive; invalidation removes them after a 
 4. Follow those calls into the PG repository, ES adapter, and cache implementation.
 5. Read `lifespan` and `rebuild` together; explain what a code-triggered reload does.
 6. Read `app.js`'s `api`, `loadDocuments`, and query/inspector handlers alongside the UI.
-7. Revisit parent roadmap Weeks 1–4 and Labs 1–4; then inspect agent scaffolding and Labs 11–12.
+7. Revisit parent roadmap Weeks 1–4 and Labs 1–4, then trace governance, evaluation and the real agent runtimes in Labs 11–12.
+8. In Voice notes, follow capture → transcription → summary → document → RAG. Compare each model output to its input.
 
 ## 7. Five small, safe learning exercises
 
@@ -263,13 +270,13 @@ These observations assume your local services are healthy and default BM25 is ac
 - Missing results: compare PG detail with ES inspection, then check exact source/tags/metadata.
   After a write error, inspect both stores before retrying; partial success is possible.
 
-This is not production-ready: no authentication/ACL enforcement, distributed transaction,
-durable indexing queue, broad backend tests, or retrieval-quality evaluation is implemented.
-Redis failures can fail searches; startup loads the whole PG dataset and rebuilds serially.
-The Compose file provides no explicit persistent-volume/backup strategy; do not assume
-container replacement preserves your learning data. Core service ports are published and
-ES security is disabled; the frontend is an unauthenticated local learning interface.
-The existing policy tests do not validate the API, storage consistency, or a running agent.
+This remains a local learning app. Authentication/ACL and strict governance are opt-in;
+evaluation is implemented, but no distributed write transaction or durable indexing queue
+is provided. Redis failures can fail searches; startup rebuilds the document index serially.
+Qdrant and Neo4j have named volumes; core stores still need an explicit backup strategy.
+Core service ports are published and ES security is disabled in this development setup.
+The lightweight traces are not a full OpenTelemetry deployment. Voice recordings live
+in page memory until downloaded, and automatic transcription/summary can be wrong.
 
 ## 9. Keep this guide useful
 

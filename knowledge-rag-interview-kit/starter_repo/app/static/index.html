@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Knowledge Studio</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/static/style.css?v=20260921-1">
-  <script src="/static/app.js?v=20260921-1" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=20261025-2">
+  <script src="/static/app.js?v=20261025-2" defer></script>
+  <script src="/static/labs.js?v=20261025-1" defer></script>
+  <script src="/static/voice.js?v=20261025-2" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to workspace</a>
@@ -18,13 +20,21 @@
       <a href="#documents" data-view="documents"><span aria-hidden="true">▤</span> Documents</a>
       <a href="#search" data-view="search"><span aria-hidden="true">⌕</span> Search & query</a>
       <a href="#rag" data-view="rag"><span aria-hidden="true">✧</span> RAG answers</a>
+      <a href="#voice" data-view="voice"><span aria-hidden="true">◉</span> Voice notes</a>
+      <p class="nav-label">LEARNING LABS</p>
+      <a href="#graph" data-view="graph"><span class="lab-number">06</span> GraphRAG</a>
+      <a href="#governance" data-view="governance"><span class="lab-number">08</span> Governance</a>
+      <a href="#evaluation" data-view="evaluation"><span class="lab-number">09</span> Evaluation</a>
+      <a href="#observability" data-view="observability"><span class="lab-number">10</span> Observability</a>
+      <a href="#agent" data-view="agent"><span class="lab-number">11</span> Agent playground</a>
+      <a href="#durable-agent" data-view="durable-agent"><span class="lab-number">12</span> Durable agent</a>
       <p class="nav-label">DATA EXPLORER</p>
       <a href="#redis" data-view="redis"><span aria-hidden="true">◷</span> Redis cache</a>
       <a href="#elastic" data-view="elastic"><span aria-hidden="true">⌘</span> Elasticsearch <span class="nav-note">Kibana</span></a>
       <p class="nav-label">LOCAL SERVICES</p>
       <a href="#server" data-view="server"><span aria-hidden="true">◉</span> Server status</a>
     </nav>
-    <div class="sidebar-bottom"><span class="small-label">CONNECTIONS</span><div id="connections">Checking services…</div><a href="/docs" target="_blank" rel="noopener">Backend API docs ↗</a></div>
+    <div class="sidebar-bottom"><span class="small-label">CONNECTIONS</span><div id="connections">Checking services…</div><a href="/docs" target="_blank" rel="noopener">Backend API docs ↗</a><details class="api-access"><summary>API access</summary><form id="api-access-form"><label>Bearer token<input id="api-token" type="password" autocomplete="off" placeholder="Only if authentication is enabled"></label><button type="submit">Apply token</button><p id="api-access-status" role="status">Token is kept in this page only.</p></form></details></div>
   </aside>
 
   <div class="workspace">
@@ -88,6 +98,29 @@ RAG_ENABLED=true .venv/bin/uvicorn app.main:app --reload</pre><p class="helper">
         <div id="rag-result" aria-live="polite"><div class="state">Ready when your documents are.<span>Index a document, then ask a question above.</span></div></div>
       </section>
 
+      <section id="view-voice" class="view" aria-labelledby="voice-title-heading" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LAB 13 · LOCAL VOICE</p><h1 id="voice-title-heading">Voice notes</h1><p>Record a thought or a meeting. Turn speech into searchable knowledge.</p></div><button id="voice-refresh" type="button">Check setup</button></div>
+        <p id="voice-setup-status" class="helper" role="status">Checking local models…</p>
+        <details id="voice-setup" class="context"><summary>Local setup · no API key</summary><p>Run these commands in starter_repo, then start the API. The speech model is downloaded once; recording and summaries run locally.</p><pre>.venv/bin/python -m pip install -e '.[voice]'
+.venv/bin/python scripts/setup_voice.py
+ollama pull qwen2.5:3b
+sh scripts/start_local.sh</pre><p class="helper">Use localhost or HTTPS in a browser with microphone access. If the embedded browser cannot open the microphone, open this same page in Chrome/Safari or import audio below.</p></details>
+        <div class="voice-recorder">
+          <div class="voice-recording-line"><span id="voice-state" role="status">Ready</span><meter id="voice-level" min="0" max="1" value="0" aria-label="Microphone level"></meter><span id="voice-progress" class="helper"></span></div>
+          <div class="lab-actions"><button id="voice-start" class="primary" type="button" disabled>Start recording</button><button id="voice-stop" type="button" disabled>Stop recording</button><button id="voice-retry" type="button" hidden>Retry pending audio</button><a id="voice-download" class="button" download="voice-recording.wav" hidden>Download audio</a><button id="voice-clear" class="quiet" type="button">New note</button></div>
+          <div class="voice-options"><label>Speech & summary language<select id="voice-language"><option value="auto">Detect automatically</option><option value="en">English</option><option value="zh">中文</option></select></label><label class="check"><input id="voice-auto-summary" type="checkbox" checked> Summarize after recording stops</label></div>
+          <p class="helper">Up to 10 minutes per note. Transcript updates in ~8-second chunks plus processing time. Audio stays in this page until you download it; only saved notes enter the document library.</p>
+          <details class="voice-import"><summary>Or import an audio recording</summary><div id="voice-drop" class="file-picker"><input id="voice-file" type="file" accept="audio/*" aria-label="Choose an audio recording"><span class="helper">or drop audio here · up to 20 MiB / 10 minutes</span></div><p class="helper">WAV and browser-supported MP3/M4A/OGG. Converted to mono audio in your browser.</p></details>
+          <p id="voice-message" role="status" aria-live="polite">Start recording or import audio. You can also paste a transcript below.</p><p id="voice-latency" class="helper"></p>
+        </div>
+        <div class="voice-notes-grid">
+          <div><div class="section-bar"><label for="voice-transcript"><strong>Transcript</strong></label><span class="tag">Editable after transcription</span></div><textarea id="voice-transcript" rows="18" maxlength="24000" placeholder="Your transcript will appear here. Or paste text to try a local summary."></textarea><p class="helper">Review names, numbers and words near chunk boundaries. Speech recognition can make mistakes. Maximum 24,000 characters.</p></div>
+          <div><div class="section-bar"><label for="voice-summary"><strong>Summary & actions</strong></label><button id="voice-summarize" type="button" disabled>Generate summary</button></div><textarea id="voice-summary" rows="18" placeholder="Key points, decisions, tasks and open questions. Review and edit before saving."></textarea><p class="helper">Draft notes from a local model. Unstated owners and dates should remain unspecified.</p></div>
+        </div>
+        <form id="voice-save-form" class="voice-save-row"><label>Document title<input id="voice-title" required maxlength="200" value="Meeting notes" autocomplete="off"></label><button id="voice-save" type="button" class="primary" disabled>Save to document library</button></form>
+        <div id="voice-saved" class="lab-actions" role="status"></div>
+      </section>
+
       <section id="view-redis" class="view" aria-labelledby="redis-title" hidden>
         <div class="page-heading"><div><p class="eyebrow">LOOK UNDER THE HOOD</p><h1 id="redis-title">Redis cache</h1><p>See the search results temporarily stored in your cache.</p></div><button class="primary" id="redis-refresh">↻ Refresh cache</button></div>
         <div class="info-line"><strong>30-second cache</strong><span>Run a search, then refresh here before it expires. Reading entries does not extend their lifetime.</span></div>
@@ -109,6 +142,58 @@ RAG_ENABLED=true .venv/bin/uvicorn app.main:app --reload</pre><p class="helper">
         <ol class="steps"><li><h3>Start Kibana</h3><p>In the starter_repo directory, run:</p><pre>docker compose --profile tools up -d kibana</pre><p class="helper">First startup can take a few minutes. Open Kibana once it is ready.</p></li><li><h3>Create a data view</h3><p>Open <strong>Stack Management → Data Views → Create data view</strong>. Use the index below and choose “I don't want to use the time filter”.</p><pre id="index-name">Loading index name…</pre></li><li><h3>Explore in Discover</h3><p>Open <strong>Discover</strong> and select your data view. Add title, content, source, tags, and metadata columns.</p><details><summary>Or use Dev Tools</summary><pre id="elastic-query"></pre></details></li></ol>
         </details>
       </section>
+      <section id="view-governance" class="view" aria-labelledby="governance-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LAB 8 · KNOWLEDGE LIFECYCLE</p><h1 id="governance-title">Governance</h1><p>Register ownership, review versions, and publish usable knowledge.</p></div><button type="button" id="governance-refresh">Refresh</button></div>
+        <label class="lab-document">Document<select id="governance-document" class="document-picker" aria-describedby="governance-document-help"><option value="">Loading documents…</option></select></label>
+        <p id="governance-document-help" class="helper">Choose a library document to load its governance record.</p>
+        <div id="governance-message" class="lab-message" role="status" aria-live="polite"></div>
+        <ol id="governance-lifecycle" class="lifecycle" aria-label="Knowledge lifecycle"></ol>
+        <div class="lab-columns">
+          <form id="governance-draft-form" class="lab-panel"><h2>Ownership & dates</h2><p class="helper">Saving creates a new draft version, including for a published document.</p><fieldset id="governance-fields" disabled><div class="form-grid">
+            <label class="full">Source URI<input id="gov-source-uri" required maxlength="2000" placeholder="lab://policy/annual-leave"></label>
+            <label>Source owner<input id="gov-source-owner" required maxlength="200"></label><label>Business owner<input id="gov-business-owner" required maxlength="200"></label>
+            <label>Effective date<input id="gov-effective-date" type="date" required></label><label>Expiry date · optional<input id="gov-expiry-date" type="date"></label>
+            <label>Security level<select id="gov-security-level"><option value="0">0 · Public within tenant</option><option value="1">1 · Internal</option><option value="2">2 · Confidential</option><option value="3">3 · Restricted</option></select></label>
+            <label>Confidence score<input id="gov-confidence" type="number" min="0" max="1" step="0.01" value="1" required></label>
+          </div><button type="submit" class="primary">Save draft version</button></fieldset></form>
+          <div class="lab-panel"><h2>Review & publish</h2><p id="governance-current" class="helper">Select a document to begin.</p>
+            <form id="governance-transition-form"><label>Reason<textarea id="gov-transition-reason" required maxlength="1000" rows="2" placeholder="What did you check?"></textarea></label><button id="gov-transition" class="primary" type="submit" disabled>Validate draft</button></form>
+            <form id="governance-rollback-form" class="lab-divider"><h3>Restore a previous version</h3><label>Version<select id="gov-rollback-version" required><option value="">No versions loaded</option></select></label><label>Reason<input id="gov-rollback-reason" required maxlength="1000"></label><button id="gov-rollback" type="submit" disabled>Restore as new draft</button></form>
+          </div>
+        </div>
+        <details class="context"><summary>Version history & provenance</summary><div id="governance-history"><p class="helper">No record loaded.</p></div></details>
+        <form id="governance-citation-form" class="lab-panel lab-divider"><h2>Validate a citation</h2><div class="form-grid"><label>Quoted source text<textarea id="gov-citation-text" rows="3" required maxlength="10000"></textarea></label><label>Expected version · optional<input id="gov-citation-version" type="number" min="1"></label></div><button type="submit">Check citation</button><div id="governance-citation-result" role="status"></div></form>
+        <div class="section-bar"><strong>Freshness monitor</strong><button type="button" id="freshness-refresh">Refresh freshness</button></div><div id="governance-freshness" class="lab-output"></div>
+      </section>
+
+      <section id="view-graph" class="view" aria-labelledby="graph-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LAB 6 · CONNECT YOUR EVIDENCE</p><h1 id="graph-title">GraphRAG</h1><p>Extract relationships, review their evidence, and explore connected entities.</p></div></div>
+        <details class="context"><summary>Build a graph from a document</summary><div class="lab-panel"><label>Document<select id="graph-document" class="document-picker"><option value="">Loading documents…</option></select></label><div class="lab-actions"><button id="graph-extract" type="button">Extract entities & relations</button><button id="graph-source" type="button">Open source</button></div><p class="helper">Extraction is a preview. Review the JSON and quotations before saving; saving replaces this document’s graph.</p><label>Reviewed extraction (JSON)<textarea id="graph-extraction" class="code-input" rows="11" placeholder='{"entities": [], "relations": []}'></textarea></label><button id="graph-save" type="button" class="primary">Save graph</button><div id="graph-build-message" class="lab-message" role="status" aria-live="polite"></div></div></details>
+        <form id="graph-query-form" class="lab-panel"><h2>Explore relationships</h2><div class="form-grid"><label>Starting entity<input id="graph-entity" required maxlength="200" value="Acme"></label><label>Question<input id="graph-question" required maxlength="2000" value="Which customer is connected to Acme through its contract?"></label><label>Hops<input id="graph-hops" type="number" min="1" max="3" value="2" required></label><label>Maximum relationships<input id="graph-limit" type="number" min="1" max="30" value="10" required></label></div><label class="check-label"><input id="graph-generate" type="checkbox"> Generate an answer from graph evidence</label><div class="lab-actions"><button type="submit" class="primary" value="query">Explore graph</button><button type="submit" value="compare">Compare with vector search</button></div><p class="helper">GraphRAG requires GRAPH_ENABLED=true, Neo4j and RAG. Answer generation uses the local model.</p></form>
+        <div id="graph-message" class="lab-message" role="status" aria-live="polite"></div><div id="graph-results" class="lab-output"><div class="state">Start with an entity to explore its relationships.</div></div>
+      </section>
+
+      <section id="view-evaluation" class="view" aria-labelledby="evaluation-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LAB 9 · MEASURE ANSWER QUALITY</p><h1 id="evaluation-title">Evaluation</h1><p>Define expected evidence and facts, then compare retrieval and answers.</p></div></div>
+        <form id="evaluation-form"><div class="lab-panel form-grid"><label>Retrieval mode<select id="eval-mode"><option value="hybrid">Hybrid</option><option value="bm25">BM25</option><option value="vector">Vector</option></select></label><label>Top-k<input id="eval-top-k" type="number" min="1" max="20" value="3" required></label><label class="check-label"><input id="eval-rerank" type="checkbox"> Rerank candidates</label><label class="check-label"><input id="eval-rewrite" type="checkbox"> Rewrite queries</label><label class="check-label full"><input id="eval-judge" type="checkbox" checked> Score answer relevance, faithfulness and correctness with the local model</label></div>
+          <div class="section-bar"><strong>Golden questions</strong><button id="eval-add-case" type="button">Add question</button></div><div id="evaluation-cases"></div>
+          <details class="context"><summary>Regression baseline</summary><div class="form-grid"><label>Previous evaluation ID<input id="eval-baseline" placeholder="Optional"></label><label>Maximum allowed score drop<input id="eval-max-drop" type="number" min="0" max="1" step="0.01" value="0.05" required></label></div><p class="helper">Use the same questions, expected answers, top-k and judge setting as the baseline.</p></details>
+          <div class="lab-actions"><button type="submit" class="primary">Run evaluation</button><button id="eval-use-baseline" type="button" disabled>Use last result as baseline</button></div><p class="helper">Evaluation generates answers for every question. Local model calls may take several minutes.</p>
+        </form><div id="evaluation-message" class="lab-message" role="status" aria-live="polite"></div><div id="evaluation-results" class="lab-output"></div>
+      </section>
+
+      <section id="view-observability" class="view" aria-labelledby="observability-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LAB 10 · FOLLOW EACH REQUEST</p><h1 id="observability-title">Observability</h1><p>Inspect latency, usage, freshness and the stages behind each request.</p></div><button id="observability-refresh" type="button">Refresh metrics & traces</button></div>
+        <label class="check-label"><input id="observability-auto" type="checkbox"> Refresh every 10 seconds while this page is open</label><p class="helper">Metrics cover the last 500 requests in this API process and reset on restart. Administrator access is required when authentication is enabled.</p><div id="observability-message" class="lab-message" role="status" aria-live="polite"></div>
+        <div id="observability-metrics" class="lab-output"></div><div class="section-bar"><strong>Recent request traces</strong><label class="check-label"><input id="traces-errors-only" type="checkbox"> Errors only</label></div><div id="observability-traces" class="lab-output"></div>
+      </section>
+
+      <section id="view-agent" class="view" aria-labelledby="agent-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LAB 11 · MODEL → TOOL → OBSERVATION</p><h1 id="agent-title">Agent playground</h1><p>Run a goal, inspect tool steps, and approve local task creation.</p></div></div><div id="agent-workspace"></div>
+      </section>
+      <section id="view-durable-agent" class="view" aria-labelledby="durable-agent-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LAB 12 · CHECKPOINTS & APPROVAL</p><h1 id="durable-agent-title">Durable agent</h1><p>Follow the state graph, review evidence, and recover interrupted runs.</p></div></div><div id="durable-agent-workspace"></div>
+      </section>
     </main>
     <footer>Knowledge Studio <span>Local development workspace</span></footer>
   </div>
@@ -123,6 +208,6 @@ RAG_ENABLED=true .venv/bin/uvicorn app.main:app --reload</pre><p class="helper">
       <label class="full">Metadata (JSON) <span class="optional">optional</span><textarea name="metadata" rows="3" placeholder='{"team": "finance"}'></textarea></label>
     </div><p id="create-error" class="error" role="alert" hidden></p><div class="dialog-actions"><span>Saved to PostgreSQL + Elasticsearch</span><button class="primary" type="submit">Create document</button></div></form>
   </dialog>
-  <dialog id="document-dialog" aria-labelledby="detail-title"><div class="dialog-heading"><div><p class="eyebrow">DOCUMENT RECORD</p><h2 id="detail-title"></h2></div><button type="button" class="icon-button" id="detail-close" aria-label="Close document">×</button></div><p id="detail-source" class="helper"></p><button id="detail-rag" type="button">Use in RAG →</button><div id="detail-content" class="document-content"></div><details class="context"><summary>Full PostgreSQL record (JSON)</summary><pre id="detail-json"></pre></details></dialog>
+  <dialog id="document-dialog" aria-labelledby="detail-title"><div class="dialog-heading"><div><p class="eyebrow">DOCUMENT RECORD</p><h2 id="detail-title"></h2></div><button type="button" class="icon-button" id="detail-close" aria-label="Close document">×</button></div><p id="detail-source" class="helper"></p><div class="lab-actions"><button id="detail-rag" type="button">Use in RAG →</button><button id="detail-governance" type="button">Governance →</button><button id="detail-graph" type="button">Build graph →</button></div><div id="detail-content" class="document-content"></div><details class="context"><summary>Full PostgreSQL record (JSON)</summary><pre id="detail-json"></pre></details></dialog>
 </body>
 </html>

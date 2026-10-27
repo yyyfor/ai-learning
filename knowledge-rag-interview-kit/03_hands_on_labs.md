@@ -366,3 +366,10 @@ Audit Issue Follow-up Agent：读取审计问题和支持文件，检索政策�
 
 ### 核心边界
 Agent 是平台 consumer，不是 Knowledge Platform 本身；受治理的知识、权限与 provenance 仍由 Knowledge/RAG Platform 提供。
+
+## Lab 13 扩展 — 本地语音到知识库
+
+在完成上述原有实验后，可使用 [Lab 13 指南](starter_repo/labs/lab13_local_voice.md)：
+麦克风/音频导入 → Whisper 本地转写 → Ollama 结构化摘要 → 人工核对 → 文档与 RAG。
+主页面入口为 Voice notes；同样遵循浏览器只访问后端 API 的边界。
+当前整体实现和 9 篇可导入的新参考笔记见 [2026-10-25 学习地图](09_current_practice.md)。

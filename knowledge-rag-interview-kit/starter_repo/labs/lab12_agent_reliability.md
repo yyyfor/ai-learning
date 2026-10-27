@@ -36,6 +36,13 @@ intake -> retrieve -> plan -> verify --(write proposed & checks pass)--> [PAUSE]
 
 ## 2. Step by step
 
+Browser workspace: open `http://127.0.0.1:8000/#durable-agent`. Choose an example or write a goal,
+then click **Run agent**. The page displays graph events, verification, approval evidence and the
+write receipt. Approve/reject controls appear only while awaiting approval. Copy the run ID to
+reload it after refreshing or restarting the API; **Resume interrupted run** appears for interrupted
+execution. The same page lists local follow-ups and saved memories. The Swagger steps below use
+the same APIs.
+
 ```sh
 source .venv/bin/activate
 pip install -e '.[agent]'

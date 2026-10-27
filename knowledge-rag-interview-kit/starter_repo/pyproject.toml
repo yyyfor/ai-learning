@@ -19,6 +19,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+voice = [
+  "faster-whisper>=1.2,<2", # optional CPU transcription; model downloaded explicitly
+]
 dev = [
   "httpx",
   "pytest",

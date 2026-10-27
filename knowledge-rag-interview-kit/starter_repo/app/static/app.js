@@ -5,6 +5,8 @@ let documentRequest = 0;
 let redisRequest = 0;
 let searchRequest = 0;
 let elasticRequest = 0;
+let apiToken = '';
+let accessVersion = 0;
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -14,19 +16,24 @@ function element(tag, className, text) {
 }
 
 async function api(path, options = {}) {
+  const requestedAccess = accessVersion;
   const { timeout = 30000, ...requestOptions } = options;
   const response = await fetch(path, {
     ...requestOptions,
-    headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...options.headers },
+    headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(apiToken ? { Authorization: `Bearer ${apiToken}` } : {}), ...options.headers },
     signal: AbortSignal.timeout(timeout),
   });
   const body = await response.json().catch(() => null);
+  if (requestedAccess !== accessVersion) throw new Error('API access changed. Retry this request.');
   if (!response.ok) {
     const detail = body?.detail;
     const message = Array.isArray(detail)
       ? detail.map((item) => `${item.loc.slice(1).join('.')}: ${item.msg}`).join('; ')
       : typeof detail === 'string' ? detail : `Request failed (${response.status}). Check the backend services.`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
   return body;
 }
@@ -36,6 +43,32 @@ function errorMessage(error) {
   if (error instanceof TypeError) return 'Could not reach the backend. Check that the API is running.';
   return error.message;
 }
+
+$('api-access-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (document.querySelector('[aria-busy="true"]') || window.labWorkspace?.isBusy() || window.voiceWorkspace?.isBusy()) {
+    $('api-access-status').textContent = 'Wait for the current request to finish before changing API access.';
+    return;
+  }
+  apiToken = $('api-token').value.trim();
+  accessVersion++;
+  $('api-token').value = '';
+  $('api-access-status').textContent = apiToken ? 'Token applied for this page session.' : 'Token cleared.';
+  documentRequest++; redisRequest++; searchRequest++; elasticRequest++;
+  $('documents-body').replaceChildren();
+  $('documents-table').hidden = true;
+  $('search-results').replaceChildren();
+  $('context-panel').hidden = $('search-pagination').hidden = true;
+  $('query-context').textContent = $('query-citations').textContent = '';
+  $('redis-entries').replaceChildren();
+  $('elastic-records').replaceChildren();
+  $('elastic-mapping').textContent = '';
+  $('document-dialog').close();
+  $('detail-content').textContent = $('detail-json').textContent = '';
+  window.labWorkspace?.resetAccess();
+  window.voiceWorkspace?.resetAccess();
+  navigate();
+});
 
 const controlUrl = `http://${location.hostname === 'localhost' ? 'localhost' : '127.0.0.1'}:8001`;
 let serverBusy = false;
@@ -122,6 +155,13 @@ async function showDocument(id) {
       $('document-dialog').close();
       location.hash = 'rag';
     };
+    for (const view of ['governance', 'graph']) {
+      $(`detail-${view}`).onclick = () => {
+        window.labWorkspace?.selectDocument(view, document.id);
+        $('document-dialog').close();
+        location.hash = view;
+      };
+    }
     if (!$('document-dialog').open) $('document-dialog').showModal();
   } catch (error) { notice(errorMessage(error), true); }
 }
@@ -473,19 +513,28 @@ $('rag-form').addEventListener('submit', async (event) => {
 });
 
 function navigate() {
-  const names = { documents: 'Documents', search: 'Search & query', rag: 'RAG answers', redis: 'Redis cache', elastic: 'Elasticsearch', server: 'Server status' };
+  const names = { documents: 'Documents', search: 'Search & query', rag: 'RAG answers', voice: 'Voice notes · Lab 13', redis: 'Redis cache', elastic: 'Elasticsearch', server: 'Server status',
+    graph: 'GraphRAG · Lab 6', governance: 'Governance · Lab 8', evaluation: 'Evaluation · Lab 9',
+    observability: 'Observability · Lab 10', agent: 'Agent playground · Lab 11', 'durable-agent': 'Durable agent · Lab 12' };
   state.view = Object.hasOwn(names, location.hash.slice(1)) ? location.hash.slice(1) : 'documents';
   document.querySelectorAll('.view').forEach((view) => { view.hidden = view.id !== `view-${state.view}`; });
   document.querySelectorAll('[data-view]').forEach((link) => {
     if (link.dataset.view === state.view) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
+  const navigation = document.querySelector('nav');
+  const currentLink = navigation.querySelector('[aria-current="page"]');
+  if (currentLink && navigation.scrollWidth > navigation.clientWidth) {
+    navigation.scrollLeft = currentLink.offsetLeft - navigation.offsetLeft - 8;
+  }
   $('breadcrumb').textContent = names[state.view];
   if (state.view === 'documents') loadDocuments();
   if (state.view === 'redis') loadRedis();
   if (state.view === 'elastic') loadElastic();
   if (state.view === 'rag') loadRagStatus();
   if (state.view === 'server') loadServerStatus();
+  window.labWorkspace?.navigate(state.view);
+  window.voiceWorkspace?.navigate(state.view);
   loadHealth();
 }
 
@@ -509,6 +558,7 @@ $('create-form').addEventListener('submit', async (event) => {
     form.reset();
     $('create-dialog').close();
     state.documentPage = 1;
+    window.labWorkspace?.invalidateDocuments();
     notice(`“${document.title}” created and indexed. Ready to search.`);
     loadDocuments();
   } catch (error) { $('create-error').textContent = errorMessage(error); $('create-error').hidden = false; }

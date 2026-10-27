@@ -1,0 +1,78 @@
+{
+  "reviewed_on": "2026-10-25",
+  "description": "Original study notes based on reviewed primary sources, with project-specific exercises. These are curated snapshots, not live web retrieval or copies of the source pages.",
+  "notes": [
+    {
+      "key": "hybrid-retrieval",
+      "title": "Hybrid retrieval: BM25, dense vectors and RRF",
+      "sources": ["https://www.elastic.co/docs/solutions/search/hybrid-search", "https://qdrant.tech/documentation/search/hybrid-queries/"],
+      "tags": ["rag", "hybrid", "lab4"],
+      "question": "How does hybrid retrieval combine BM25 and dense vectors with RRF?",
+      "content": "Hybrid retrieval 同时利用关键词匹配和语义相似度。BM25 对编号、缩写、精确术语有用；dense vectors 能找到不同措辞表达的相似意思。RRF 按名次融合结果，不要求两个检索器的原始分数处于同一尺度。Elastic 当前文档推荐 semantic_text 工作流；Qdrant Query API 也提供组合查询能力。\n项目实践：本仓库 Lab 4 在应用层融合 Elasticsearch 的 BM25 chunks 与 Qdrant 的 dense candidates，可再做 rerank。这里没有把全部检索搬到同一个数据库。ELASTICSEARCH_SEMANTIC_ENABLED 默认 false；semantic_text 需要独立配置 inference 与适用的部署能力，不能仅靠打开开关获得。\n练习：对同一问题比较 bm25、vector、hybrid，检查引用 ID、Recall@K 和延迟。精确合同编号与自然语言改写各选一题。不要把一个例子的成功当作普遍优越性。"
+    },
+    {
+      "key": "graph-evidence",
+      "title": "GraphRAG: reviewed relationships and evidence",
+      "sources": ["https://neo4j.com/docs/neo4j-graphrag-python/current/"],
+      "tags": ["graphrag", "evidence", "lab6"],
+      "question": "Why should GraphRAG relationships be reviewed before they are saved?",
+      "content": "GraphRAG 把检索扩展到实体和关系。Neo4j 官方 Python 包为 neo4j-graphrag，旧 neo4j-genai 包已弃用。图构建与图检索是不同步骤：抽取模型产出候选实体/边，检索阶段沿关系取证。\n项目实践：Lab 6 使用已有 Neo4j driver 与本地模型，没有依赖整个官方 GraphRAG SDK。页面先 Extract，再人工检查实体 ID、关系方向、引用原文，最后 Save reviewed graph。实体去重由 Lab 7 的 refinement 实验辅助。\n练习：比较合同到对手方的两跳路径与向量结果。图中出现一条边不代表事实已被证实；模型可能抽取错误，文档也可能过期。保存引用出处、文档版本与审核状态，才能说明路径为什么可信。"
+    },
+    {
+      "key": "context-engineering",
+      "title": "Context engineering: state, tools and bounded evidence",
+      "sources": ["https://docs.langchain.com/oss/python/langchain/context-engineering"],
+      "tags": ["agent", "context", "lab11"],
+      "question": "What is context engineering for an agent?",
+      "content": "Context engineering 关注每次模型调用究竟能看到哪些指令、历史、工具、检索证据和输出格式。运行身份、会话状态与跨会话记忆应分开理解；历史越长不等于推理越可靠。\n项目实践：Lab 11 展示目标、工具结果、step budget 与结束条件。Lab 12 增加持久化执行。RAG 是向模型提供外部证据的方法；LangChain 是帮助连接模型和工具的框架；LangGraph 管理有状态执行。三者不是同义词。\n练习：在同一目标下只提供必要的工具与检索片段，观察工具调用和引用变化。压缩历史时保留待审批参数、证据 ID 和已完成写入的回执；不能把压缩后的猜测提升为事实。文档和工具返回内容是数据，不应覆盖系统约束或用户授权。"
+    },
+    {
+      "key": "durable-agents",
+      "title": "Durable agents: checkpoint, memory and idempotent writes",
+      "sources": ["https://docs.langchain.com/oss/python/langgraph/persistence"],
+      "tags": ["agent", "checkpoint", "lab12"],
+      "question": "How is a checkpoint different from long-term memory?",
+      "content": "LangGraph 区分 checkpointer 与 store：checkpoint 保存某个 thread 的图状态，帮助暂停、恢复和故障恢复；store 保存可跨 thread 使用的应用数据。长期 memory 不应该替代当前执行状态。\n项目实践：Lab 12 用 SQLite checkpoint 保存执行状态，用 PostgreSQL 保存业务记录与执行账本。审批绑定具体的工具参数、证据和到期时间。恢复时必须处理工具已成功但调用方没有收到响应的情况；checkpoint 本身不保证外部写入 exactly-once。\n练习：记录 run ID，审批前刷新页面，再加载这个 run。执行 crash demo，核对恢复后没有第二条 follow-up。比较执行事件、写入 receipt 与 memory；这三类记录分别回答发生了什么、写入是否完成、以后能记住什么。"
+    },
+    {
+      "key": "mcp-boundary",
+      "title": "MCP: interoperability is not authorization",
+      "sources": ["https://modelcontextprotocol.io/docs/2026-07-28/learn/architecture"],
+      "tags": ["mcp", "tools", "lab12"],
+      "question": "Does MCP replace authorization or the agent execution loop?",
+      "content": "MCP 定义 host、client 与 server 如何交换工具和上下文能力。它帮助不同应用发现和调用能力，不代替模型的决策过程，也不自动决定用户是否有权执行某个动作。协议规范与某个 Python SDK 的版本是两件事；本参考使用 2026-07-28 版本的官方架构说明。\n项目实践：app/mcp_server.py 暴露只读知识能力；Agent 可以选择 direct 或 MCP transport。写入审批仍由项目的 API/运行时处理，不能因为工具来自 MCP 就跳过。\n练习：对比两种 transport 的相同检索目标，核对结果与证据。阅读实际安装的 SDK 文档后再升级依赖；不要直接复制旧版 FastMCP 示例到不同主版本。对不可信服务器返回的内容，继续按外部数据处理。"
+    },
+    {
+      "key": "evaluation-separation",
+      "title": "RAG evaluation: retrieval quality versus answer faithfulness",
+      "sources": ["https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/", "https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/faithfulness/"],
+      "tags": ["evaluation", "faithfulness", "lab9"],
+      "question": "Why measure retrieval quality separately from answer faithfulness?",
+      "content": "RAG evaluation 应分别检查检索证据和生成回答。Recall@K 关注相关来源是否被找到；排序指标关注位置；faithfulness 检查回答中的主张能否由给定上下文支持。回答忠于上下文，不代表上下文本身正确或仍有效，也不等同于完整回答了问题。Ragas 提供检索、回答、工具使用等多类指标。\n项目实践：Lab 9 是本仓库自己的评估实现，不是直接运行 Ragas。输入 golden questions、expected_sources、expected_facts，再比较同一数据集上的 baseline。LLM judge 的评分也可能出错，应抽样人工复核。\n练习：至少覆盖精确编号、改写、无答案、过期文档和权限隔离。语音新增两层质量：转写的名字/数字是否正确，摘要的决定/任务是否被原话支持。一次 API 200 只代表执行成功。"
+    },
+    {
+      "key": "observability-freshness",
+      "title": "Observability: traces, model usage and knowledge freshness",
+      "sources": ["https://opentelemetry.io/docs/specs/semconv/gen-ai/"],
+      "tags": ["observability", "freshness", "lab10"],
+      "question": "What should a local RAG and voice application observe?",
+      "content": "OpenTelemetry 的 GenAI semantic conventions 文档入口已迁移到独立的官方仓库。接入时应查看当前规范与稳定性，而不是假定所有旧属性名一直不变。\n项目实践：本项目使用轻量内存 trace 和 API 指标，尚未接入完整 OpenTelemetry exporter。Lab 10 展示检索/模型耗时、token 使用、错误率与知识 freshness。语音 API 额外返回音频时长和处理耗时；前端显示等待 chunk 数。\n练习：分别模拟没有检索结果、模型离线、索引落后与 ASR 跟不上讲话。HTTP 健康不代表模型已下载，也不代表答案有依据。排障保留 trace ID、模型名、耗时与状态即可；不必把完整录音和敏感 transcript 写入普通日志。费用为零也不代表没有 CPU、内存和延迟成本。"
+    },
+    {
+      "key": "structured-summaries",
+      "title": "Local structured summaries with Ollama",
+      "sources": ["https://docs.ollama.com/capabilities/structured-outputs"],
+      "tags": ["ollama", "summary", "lab13"],
+      "question": "How do local structured summaries avoid inventing action owners?",
+      "content": "Ollama 本地 chat API 的 format 可以传 JSON schema，帮助输出稳定结构；调用方仍需验证返回对象。结构正确不等于事实正确。摘要可以区分 overview、key_points、decisions、action_items 和 open_questions。\n项目实践：Lab 13 用 Pydantic 定义结构，默认使用本机已有的 qwen2.5:3b。先转写再总结；原话未给出的 owner 和 due 应为 null。长 transcript 分段总结后合并，保留原文以便人工核对。\n练习：输入一段同时包含决定、未决问题和没有截止日期的任务的会议文字。检查模型没有补出日期或人名。把一段含有“忽略之前指令”的文本作为引用数据，确认摘要没有据此调用工具。页面保存的是 draft document，索引是下一步明确操作，不自动发布为权威知识。"
+    },
+    {
+      "key": "local-voice",
+      "title": "Local voice: AudioWorklet, Whisper and near-real-time chunks",
+      "sources": ["https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia", "https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet", "https://github.com/SYSTRAN/faster-whisper"],
+      "tags": ["voice", "whisper", "lab13"],
+      "question": "Why is chunked Whisper transcription near-real-time rather than instant streaming?",
+      "content": "getUserMedia 需要用户麦克风许可及安全上下文；localhost 可用于开发。AudioWorklet 在音频线程处理采样，避免采用已弃用的 ScriptProcessorNode。faster-whisper 可用 CPU int8 运行 Whisper，并用 VAD 过滤静音。\n项目实践：浏览器采集单声道 PCM，每约 8 秒封装一个完整 WAV，通过同源 FastAPI 上传。后端只从本地模型目录加载权重，不向云端发送音频。队列顺序转写，停止时提交尾段，失败的 chunk 保留以便重试。\n这属于 near-real-time：延迟包含采集窗口、排队和推理。它没有原生逐词流式识别、说话人分离或录音服务器归档。长句跨 chunk 可能断开，专有名词和中英混合可能出错。练习：中英文各说一句，包含数字，再停顿；检查尾段、静音和下载音频。"
+    }
+  ]
+}
